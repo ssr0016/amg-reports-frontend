@@ -7,6 +7,34 @@ import Spinner from "./Spinner";
 
 const defaultWeeks5 = { week1: "", week2: "", week3: "", week4: "", week5: "" };
 
+// ✅ ilabas sa labas — constant, hindi kailangan sa loob ng component
+const VALID_MONTHS = [
+  "january",
+  "february",
+  "march",
+  "april",
+  "may",
+  "june",
+  "july",
+  "august",
+  "september",
+  "october",
+  "november",
+  "december",
+];
+
+// ✅ Helper — kunin ang month name mula sa input
+function parseMonthFromInput(input) {
+  const lower = input.trim().toLowerCase();
+  return VALID_MONTHS.find((m) => lower.includes(m));
+}
+
+// ✅ Helper — kunin ang year mula sa input, default ay current year
+function parseYearFromInput(input) {
+  const match = input.match(/\d{4}/);
+  return match ? parseInt(match[0]) : new Date().getFullYear();
+}
+
 export default function ReportForm({ reportId }) {
   const navigate = useNavigate();
   const isEditing = !!reportId;
@@ -76,6 +104,40 @@ export default function ReportForm({ reportId }) {
 
   const submit = async (e) => {
     e.preventDefault();
+
+    // ✅ Required fields
+    if (!form.month.trim()) return toast.error("Month is required.");
+    if (!form.worker.trim()) return toast.error("Worker name is required.");
+    if (!form.areaAssignment.trim())
+      return toast.error("Area assignment is required.");
+    if (!form.churchName.trim()) return toast.error("Church name is required.");
+
+    // ✅ Valid month name check
+    const parsedMonth = parseMonthFromInput(form.month);
+    if (!parsedMonth) {
+      toast.error("Please enter a valid month (ex. February 2026).");
+      return;
+    }
+
+    // ✅ Apply sa BOTH create at edit — hindi pwedeng current o future month
+    const parsedYear = parseYearFromInput(form.month);
+    const now = new Date();
+    const currentMonthIndex = now.getMonth();
+    const currentYear = now.getFullYear();
+    const inputMonthIndex = VALID_MONTHS.indexOf(parsedMonth);
+
+    const inputDate = new Date(parsedYear, inputMonthIndex, 1);
+    const currentDate = new Date(currentYear, currentMonthIndex, 1);
+
+    if (inputDate >= currentDate) {
+      const monthName =
+        parsedMonth.charAt(0).toUpperCase() + parsedMonth.slice(1);
+      toast.error(
+        `You cannot report for ${monthName} ${parsedYear} yet. Please report for a previous month only.`,
+      );
+      return;
+    }
+
     try {
       setLoading(true);
       if (isEditing) {
@@ -87,12 +149,13 @@ export default function ReportForm({ reportId }) {
       }
       setTimeout(() => navigate("/"), 1000);
     } catch (error) {
-      toast.error("Failed to submit report.");
+      const message =
+        error.response?.data?.message || "Failed to submit report.";
+      toast.error(message);
     } finally {
       setLoading(false);
     }
   };
-
   if (fetching) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -106,7 +169,7 @@ export default function ReportForm({ reportId }) {
       onSubmit={submit}
       className="bg-white shadow-lg rounded-xl p-4 sm:p-8 mb-10 border border-gray-100"
     >
-      {/* ✅ HEADER WITH BACK BUTTON */}
+      {/* HEADER WITH BACK BUTTON */}
       <div className="flex items-center gap-3 mb-6">
         <button
           type="button"
@@ -125,7 +188,7 @@ export default function ReportForm({ reportId }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         <input
           name="month"
-          placeholder="Month (ex. April 2026)"
+          placeholder="Month (ex. February 2026)"
           onChange={handleChange}
           value={form.month}
           className="input"

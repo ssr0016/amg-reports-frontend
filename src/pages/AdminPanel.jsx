@@ -5,9 +5,47 @@ import API from "../services/api";
 import toast from "react-hot-toast";
 import Spinner from "../components/Spinner";
 import { useAuth } from "../context/AuthContext";
-import { FaEdit, FaTrash, FaCheck, FaUndo } from "react-icons/fa";
+import {
+  FaEdit,
+  FaTrash,
+  FaCheck,
+  FaUndo,
+  FaUsers,
+  FaFileAlt,
+  FaUserShield,
+  FaCalendarAlt,
+  FaEye,
+  FaEyeSlash, // ✅
+} from "react-icons/fa";
 
 const ITEMS_PER_PAGE = 26;
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+function getPreviousMonthLabel() {
+  const now = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return prev.toLocaleString("en-US", { month: "long", year: "numeric" });
+}
+
+function getPrevMonth() {
+  return new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1)
+    .toLocaleString("en-US", { month: "long" })
+    .toLowerCase();
+}
 
 export default function AdminPanel() {
   const navigate = useNavigate();
@@ -34,8 +72,18 @@ export default function AdminPanel() {
   const [editingUserId, setEditingUserId] = useState(null);
   const [savingUser, setSavingUser] = useState(false);
   const [showUserForm, setShowUserForm] = useState(false);
+  const [showUserPassword, setShowUserPassword] = useState(false); // ✅
 
   const [activeTab, setActiveTab] = useState("reports");
+
+  const currentYear = new Date().getFullYear();
+  const prevMonthIndex = new Date().getMonth() - 1;
+  const [trackerMonth, setTrackerMonth] = useState(
+    MONTHS[prevMonthIndex] ?? MONTHS[11],
+  );
+  const [trackerYear, setTrackerYear] = useState(
+    prevMonthIndex < 0 ? currentYear - 1 : currentYear,
+  );
 
   const fetchReports = async () => {
     try {
@@ -94,6 +142,7 @@ export default function AdminPanel() {
       password: "",
       role: "user",
     });
+    setShowUserPassword(false); // ✅
     setShowUserForm(true);
   };
 
@@ -106,6 +155,7 @@ export default function AdminPanel() {
       password: "",
       role: u.role,
     });
+    setShowUserPassword(false); // ✅
     setShowUserForm(true);
   };
 
@@ -119,6 +169,7 @@ export default function AdminPanel() {
       password: "",
       role: "user",
     });
+    setShowUserPassword(false); // ✅
   };
 
   const saveUser = async () => {
@@ -157,17 +208,57 @@ export default function AdminPanel() {
     }
   };
 
+  const prevMonthLabel = getPreviousMonthLabel();
+  const prevMonth = getPrevMonth();
+  const totalReports = reports.length;
+  const totalUsers = users.filter((u) => u.role === "user").length;
+  const totalAdmins = users.filter((u) => u.role === "admin").length;
+  const prevMonthReports = reports.filter((r) =>
+    r.month?.toLowerCase().includes(prevMonth),
+  ).length;
+  const prevMonthApproved = reports.filter(
+    (r) => r.month?.toLowerCase().includes(prevMonth) && r.completed === true,
+  ).length;
+  const prevMonthPending = prevMonthReports - prevMonthApproved;
+
+  const workers = users.filter((u) => u.role === "user");
+
+  const trackerData = workers.map((w) => {
+    const report = reports.find(
+      (r) =>
+        r.createdBy === w._id &&
+        r.month?.toLowerCase().includes(trackerMonth.toLowerCase()) &&
+        r.month?.toLowerCase().includes(String(trackerYear)),
+    );
+    const reportFallback = reports.find(
+      (r) =>
+        r.createdBy === w._id &&
+        r.month?.toLowerCase().includes(trackerMonth.toLowerCase()),
+    );
+    const matched = report || reportFallback;
+    return {
+      worker: w,
+      report: matched || null,
+      submitted: !!matched,
+      approved: matched?.completed === true,
+    };
+  });
+
+  const submittedCount = trackerData.filter((d) => d.submitted).length;
+  const notSubmittedCount = trackerData.filter((d) => !d.submitted).length;
+  const approvedCount = trackerData.filter((d) => d.approved).length;
+
   const totalReportPages = Math.ceil(reports.length / ITEMS_PER_PAGE);
   const paginatedReports = reports.slice(
     (reportPage - 1) * ITEMS_PER_PAGE,
     reportPage * ITEMS_PER_PAGE,
   );
-
   const totalUserPages = Math.ceil(users.length / ITEMS_PER_PAGE);
   const paginatedUsers = users.slice(
     (userPage - 1) * ITEMS_PER_PAGE,
     userPage * ITEMS_PER_PAGE,
   );
+  const years = [currentYear, currentYear - 1, currentYear - 2];
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
@@ -186,28 +277,73 @@ export default function AdminPanel() {
         </div>
       </div>
 
+      {/* SUMMARY CARDS */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex items-center gap-3">
+          <div className="bg-blue-100 text-blue-600 p-3 rounded-lg">
+            <FaFileAlt className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Total Reports</p>
+            <p className="text-2xl font-bold text-gray-800">{totalReports}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex items-center gap-3">
+          <div className="bg-purple-100 text-purple-600 p-3 rounded-lg">
+            <FaCalendarAlt className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">{prevMonthLabel} Reports</p>
+            <p className="text-2xl font-bold text-gray-800">
+              {prevMonthReports}
+            </p>
+            <div className="flex gap-2 mt-0.5">
+              <span className="text-xs text-green-600 font-medium">
+                ✓ {prevMonthApproved} approved
+              </span>
+              <span className="text-xs text-red-500 font-medium">
+                ● {prevMonthPending} pending
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex items-center gap-3">
+          <div className="bg-green-100 text-green-600 p-3 rounded-lg">
+            <FaUsers className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Total Users</p>
+            <p className="text-2xl font-bold text-gray-800">{totalUsers}</p>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex items-center gap-3">
+          <div className="bg-yellow-100 text-yellow-600 p-3 rounded-lg">
+            <FaUserShield className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500">Total Admins</p>
+            <p className="text-2xl font-bold text-gray-800">{totalAdmins}</p>
+          </div>
+        </div>
+      </div>
+
       {/* TABS */}
       <div className="flex gap-2 mb-6 border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab("reports")}
-          className={`cursor-pointer px-4 py-2 text-sm font-medium border-b-2 transition ${
-            activeTab === "reports"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Reports
-        </button>
-        <button
-          onClick={() => setActiveTab("users")}
-          className={`cursor-pointer px-4 py-2 text-sm font-medium border-b-2 transition ${
-            activeTab === "users"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700"
-          }`}
-        >
-          Users
-        </button>
+        {["reports", "tracker", "users"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`cursor-pointer px-4 py-2 text-sm font-medium border-b-2 transition capitalize ${
+              activeTab === tab
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {tab === "tracker"
+              ? "📋 Submission Tracker"
+              : tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
       </div>
 
       {/* ==================== REPORTS TAB ==================== */}
@@ -216,7 +352,6 @@ export default function AdminPanel() {
           <p className="text-sm text-gray-500 mb-3">
             {reports.length} total reports
           </p>
-
           {loadingReports ? (
             <div className="flex justify-center items-center h-40">
               <Spinner className="h-10 w-10 text-blue-600" />
@@ -238,11 +373,7 @@ export default function AdminPanel() {
                         <p className="text-sm text-gray-500">{r.month}</p>
                       </div>
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          r.completed
-                            ? "bg-green-100 text-green-700"
-                            : "bg-red-100 text-red-700"
-                        }`}
+                        className={`px-2 py-1 rounded-full text-xs font-semibold ${r.completed ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
                       >
                         {r.completed ? "Approved" : "For Review"}
                       </span>
@@ -254,15 +385,10 @@ export default function AdminPanel() {
                       ⛪ {r.churchName}
                     </p>
                     <div className="flex justify-end">
-                      {/* ✅ cursor-pointer */}
                       <button
                         onClick={() => toggleComplete(r._id)}
                         disabled={togglingId === r._id}
-                        className={`cursor-pointer flex items-center gap-1 text-sm px-3 py-1 rounded-lg disabled:opacity-50 ${
-                          r.completed
-                            ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                            : "bg-green-100 text-green-700 hover:bg-green-200"
-                        }`}
+                        className={`cursor-pointer flex items-center gap-1 text-sm px-3 py-1 rounded-lg disabled:opacity-50 ${r.completed ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
                       >
                         {togglingId === r._id ? (
                           <Spinner className="h-3 w-3" />
@@ -300,28 +426,16 @@ export default function AdminPanel() {
                         <td className="p-3">{r.churchName}</td>
                         <td className="p-3">
                           <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              r.completed
-                                ? "bg-green-100 text-green-700"
-                                : "bg-red-100 text-red-700"
-                            }`}
+                            className={`px-2 py-1 rounded-full text-xs font-semibold ${r.completed ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
                           >
                             {r.completed ? "Approved" : "For Review"}
                           </span>
                         </td>
                         <td className="p-3">
-                          {/* ✅ cursor-pointer */}
                           <button
                             onClick={() => toggleComplete(r._id)}
                             disabled={togglingId === r._id}
-                            title={
-                              r.completed ? "Mark as For Review" : "Approve"
-                            }
-                            className={`cursor-pointer flex items-center gap-1 text-sm px-3 py-1 rounded-lg disabled:opacity-50 ${
-                              r.completed
-                                ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                                : "bg-green-100 text-green-700 hover:bg-green-200"
-                            }`}
+                            className={`cursor-pointer flex items-center gap-1 text-sm px-3 py-1 rounded-lg disabled:opacity-50 ${r.completed ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
                           >
                             {togglingId === r._id ? (
                               <Spinner className="h-3 w-3" />
@@ -341,7 +455,6 @@ export default function AdminPanel() {
                   </tbody>
                 </table>
               </div>
-
               <Pagination
                 currentPage={reportPage}
                 totalPages={totalReportPages}
@@ -349,6 +462,181 @@ export default function AdminPanel() {
               />
             </>
           )}
+        </>
+      )}
+
+      {/* ==================== SUBMISSION TRACKER TAB ==================== */}
+      {activeTab === "tracker" && (
+        <>
+          <div className="flex flex-col sm:flex-row gap-3 mb-4">
+            <select
+              value={trackerMonth}
+              onChange={(e) => setTrackerMonth(e.target.value)}
+              className="input cursor-pointer sm:w-48"
+            >
+              {MONTHS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            <select
+              value={trackerYear}
+              onChange={(e) => setTrackerYear(Number(e.target.value))}
+              className="input cursor-pointer sm:w-32"
+            >
+              {years.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold text-green-700">
+                {submittedCount}
+              </p>
+              <p className="text-xs text-green-600 font-medium">Submitted</p>
+            </div>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold text-red-600">
+                {notSubmittedCount}
+              </p>
+              <p className="text-xs text-red-500 font-medium">Not Submitted</p>
+            </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center">
+              <p className="text-2xl font-bold text-blue-600">
+                {approvedCount}
+              </p>
+              <p className="text-xs text-blue-500 font-medium">Approved</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow p-4 border border-gray-100 mb-4">
+            <div className="flex justify-between items-center mb-2">
+              <p className="text-sm font-medium text-gray-700">
+                {trackerMonth} {trackerYear} Submission Progress
+              </p>
+              <p className="text-sm font-bold text-gray-800">
+                {submittedCount} / {workers.length}
+              </p>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-3">
+              <div
+                className="bg-green-500 h-3 rounded-full transition-all"
+                style={{
+                  width:
+                    workers.length > 0
+                      ? `${(submittedCount / workers.length) * 100}%`
+                      : "0%",
+                }}
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {workers.length > 0
+                ? `${Math.round((submittedCount / workers.length) * 100)}% submitted`
+                : "No workers found"}
+            </p>
+          </div>
+
+          {/* MOBILE */}
+          <div className="flex flex-col gap-3 sm:hidden">
+            {trackerData.map(
+              ({ worker: w, report: r, submitted, approved }) => (
+                <div
+                  key={w._id}
+                  className={`rounded-xl p-4 border ${submitted ? "bg-white border-gray-100" : "bg-red-50 border-red-200"}`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-semibold text-gray-800">{w.name}</p>
+                      <p className="text-xs text-gray-500">@{w.username}</p>
+                      {r && (
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          ⛪ {r.churchName}
+                        </p>
+                      )}
+                      {r && (
+                        <p className="text-xs text-gray-500">
+                          📍 {r.areaAssignment}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${submitted ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}
+                      >
+                        {submitted ? "✓ Submitted" : "✗ Not Submitted"}
+                      </span>
+                      {submitted && (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs font-semibold ${approved ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}
+                        >
+                          {approved ? "Approved" : "For Review"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ),
+            )}
+          </div>
+
+          {/* DESKTOP */}
+          <div className="hidden sm:block bg-white shadow rounded-lg overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="p-3">WORKER</th>
+                  <th className="p-3">CHURCH</th>
+                  <th className="p-3">AREA</th>
+                  <th className="p-3">SUBMITTED</th>
+                  <th className="p-3">STATUS</th>
+                </tr>
+              </thead>
+              <tbody>
+                {trackerData.map(
+                  ({ worker: w, report: r, submitted, approved }) => (
+                    <tr
+                      key={w._id}
+                      className={`border-b ${!submitted ? "bg-red-50" : "hover:bg-gray-50"}`}
+                    >
+                      <td className="p-3">
+                        <p className="font-medium text-gray-800">{w.name}</p>
+                        <p className="text-xs text-gray-500">@{w.username}</p>
+                      </td>
+                      <td className="p-3 text-sm text-gray-600">
+                        {r?.churchName || "—"}
+                      </td>
+                      <td className="p-3 text-sm text-gray-600">
+                        {r?.areaAssignment || "—"}
+                      </td>
+                      <td className="p-3">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-semibold ${submitted ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}
+                        >
+                          {submitted ? "✓ Submitted" : "✗ Not Yet"}
+                        </span>
+                      </td>
+                      <td className="p-3">
+                        {submitted ? (
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-semibold ${approved ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}
+                          >
+                            {approved ? "Approved" : "For Review"}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
         </>
       )}
 
@@ -371,7 +659,7 @@ export default function AdminPanel() {
             </div>
           ) : (
             <>
-              {/* MOBILE CARDS */}
+              {/* MOBILE */}
               <div className="flex flex-col gap-3 sm:hidden">
                 {paginatedUsers.map((u) => (
                   <div
@@ -381,11 +669,7 @@ export default function AdminPanel() {
                     <div className="flex justify-between items-start mb-1">
                       <p className="font-semibold text-gray-800">{u.name}</p>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                          u.role === "admin"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-gray-100 text-gray-600"
-                        }`}
+                        className={`px-2 py-0.5 rounded-full text-xs font-semibold ${u.role === "admin" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}
                       >
                         {u.role}
                       </span>
@@ -412,7 +696,7 @@ export default function AdminPanel() {
                 ))}
               </div>
 
-              {/* DESKTOP TABLE */}
+              {/* DESKTOP */}
               <div className="hidden sm:block bg-white shadow rounded-lg overflow-x-auto">
                 <table className="w-full text-left">
                   <thead className="bg-gray-100">
@@ -432,11 +716,7 @@ export default function AdminPanel() {
                         <td className="p-3">{u.email}</td>
                         <td className="p-3">
                           <span
-                            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                              u.role === "admin"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-gray-100 text-gray-600"
-                            }`}
+                            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${u.role === "admin" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"}`}
                           >
                             {u.role}
                           </span>
@@ -462,7 +742,6 @@ export default function AdminPanel() {
                   </tbody>
                 </table>
               </div>
-
               <Pagination
                 currentPage={userPage}
                 totalPages={totalUserPages}
@@ -503,18 +782,30 @@ export default function AdminPanel() {
                 onChange={handleUserFormChange}
                 className="input"
               />
-              <input
-                name="password"
-                placeholder={
-                  editingUserId
-                    ? "New Password (leave blank to keep)"
-                    : "Password"
-                }
-                type="password"
-                value={userForm.password}
-                onChange={handleUserFormChange}
-                className="input"
-              />
+
+              {/* ✅ PASSWORD WITH SHOW/HIDE */}
+              <div className="relative">
+                <input
+                  name="password"
+                  placeholder={
+                    editingUserId
+                      ? "New Password (leave blank to keep)"
+                      : "Password"
+                  }
+                  type={showUserPassword ? "text" : "password"}
+                  value={userForm.password}
+                  onChange={handleUserFormChange}
+                  className="input pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowUserPassword((prev) => !prev)}
+                  className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  {showUserPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
+              </div>
+
               <select
                 name="role"
                 value={userForm.role}
@@ -553,7 +844,7 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* ==================== DELETE USER CONFIRM MODAL ==================== */}
+      {/* DELETE USER MODAL */}
       {confirmDeleteUserId && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm text-center">
@@ -593,10 +884,8 @@ export default function AdminPanel() {
   );
 }
 
-// ==================== REUSABLE PAGINATION ====================
 function Pagination({ currentPage, totalPages, setPage }) {
   if (totalPages <= 1) return null;
-
   return (
     <div className="flex justify-end items-center gap-1 sm:gap-2 mt-6 flex-wrap">
       <button
@@ -606,21 +895,15 @@ function Pagination({ currentPage, totalPages, setPage }) {
       >
         ← Prev
       </button>
-
       {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
         <button
           key={page}
           onClick={() => setPage(page)}
-          className={`cursor-pointer px-2 sm:px-3 py-1 rounded-lg text-sm border ${
-            currentPage === page
-              ? "bg-blue-600 text-white border-blue-600"
-              : "border-gray-300 text-gray-600 hover:bg-gray-100"
-          }`}
+          className={`cursor-pointer px-2 sm:px-3 py-1 rounded-lg text-sm border ${currentPage === page ? "bg-blue-600 text-white border-blue-600" : "border-gray-300 text-gray-600 hover:bg-gray-100"}`}
         >
           {page}
         </button>
       ))}
-
       <button
         onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
         disabled={currentPage === totalPages}

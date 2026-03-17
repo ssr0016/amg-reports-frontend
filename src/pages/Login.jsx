@@ -1,9 +1,10 @@
-// /src/pages/Login.jsx
+// Login.jsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import Spinner from "../components/Spinner";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ export default function Login() {
 
   const [form, setForm] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // ✅
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -35,7 +37,6 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-sm border border-gray-100">
-        {/* LOGO / TITLE */}
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-gray-800">AMG Reports</h1>
           <p className="text-sm text-gray-500 mt-1">Sign in to your account</p>
@@ -60,19 +61,29 @@ export default function Login() {
             <label className="text-sm font-medium text-gray-700 mb-1 block">
               Password
             </label>
-            <input
-              name="password"
-              type="password"
-              placeholder="Enter password"
-              onChange={handleChange}
-              value={form.password}
-              className="input"
-              autoComplete="current-password"
-            />
+            {/* ✅ password field na may show/hide */}
+            <div className="relative">
+              <input
+                name="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter password"
+                onChange={handleChange}
+                value={form.password}
+                className="input pr-10"
+                autoComplete="current-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                className="cursor-pointer absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
           </div>
 
           <button
-            className="submit-btn w-full flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
+            className="cursor-pointer submit-btn w-full flex items-center justify-center gap-2 mt-2 disabled:opacity-50"
             disabled={loading}
           >
             {loading ? (
