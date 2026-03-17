@@ -15,8 +15,10 @@ import {
   FaUserShield,
   FaCalendarAlt,
   FaEye,
-  FaEyeSlash, // ✅
+  FaEyeSlash,
+  FaDownload, // ✅
 } from "react-icons/fa";
+import { exportSingleReport, exportBulkReports } from "../utils/exportExcel"; // ✅
 
 const ITEMS_PER_PAGE = 26;
 
@@ -72,9 +74,12 @@ export default function AdminPanel() {
   const [editingUserId, setEditingUserId] = useState(null);
   const [savingUser, setSavingUser] = useState(false);
   const [showUserForm, setShowUserForm] = useState(false);
-  const [showUserPassword, setShowUserPassword] = useState(false); // ✅
+  const [showUserPassword, setShowUserPassword] = useState(false);
 
   const [activeTab, setActiveTab] = useState("reports");
+
+  // ✅ Bulk download state
+  const [bulkMonth, setBulkMonth] = useState("");
 
   const currentYear = new Date().getFullYear();
   const prevMonthIndex = new Date().getMonth() - 1;
@@ -129,6 +134,23 @@ export default function AdminPanel() {
     }
   };
 
+  // ✅ Bulk download handler
+  const handleBulkDownload = () => {
+    const filtered = bulkMonth
+      ? reports.filter((r) =>
+          r.month?.toLowerCase().includes(bulkMonth.toLowerCase()),
+        )
+      : reports;
+
+    if (filtered.length === 0) {
+      toast.error("No reports found for selected month.");
+      return;
+    }
+
+    exportBulkReports(filtered, bulkMonth || "All");
+    toast.success(`Downloading ${filtered.length} reports...`);
+  };
+
   const handleUserFormChange = (e) => {
     setUserForm({ ...userForm, [e.target.name]: e.target.value });
   };
@@ -142,7 +164,7 @@ export default function AdminPanel() {
       password: "",
       role: "user",
     });
-    setShowUserPassword(false); // ✅
+    setShowUserPassword(false);
     setShowUserForm(true);
   };
 
@@ -155,7 +177,7 @@ export default function AdminPanel() {
       password: "",
       role: u.role,
     });
-    setShowUserPassword(false); // ✅
+    setShowUserPassword(false);
     setShowUserForm(true);
   };
 
@@ -169,7 +191,7 @@ export default function AdminPanel() {
       password: "",
       role: "user",
     });
-    setShowUserPassword(false); // ✅
+    setShowUserPassword(false);
   };
 
   const saveUser = async () => {
@@ -279,50 +301,65 @@ export default function AdminPanel() {
 
       {/* SUMMARY CARDS */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex items-center gap-3">
-          <div className="bg-blue-100 text-blue-600 p-3 rounded-lg">
-            <FaFileAlt className="h-5 w-5" />
+        {/* Total Reports */}
+        <div className="bg-white rounded-xl shadow p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
+          <div className="bg-blue-100 text-blue-600 p-2 sm:p-3 rounded-lg shrink-0">
+            <FaFileAlt className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Total Reports</p>
-            <p className="text-2xl font-bold text-gray-800">{totalReports}</p>
+          <div className="min-w-0">
+            <p className="text-xs text-gray-500 truncate">Total Reports</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-800">
+              {totalReports}
+            </p>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex items-center gap-3">
-          <div className="bg-purple-100 text-purple-600 p-3 rounded-lg">
-            <FaCalendarAlt className="h-5 w-5" />
+
+        {/* Previous Month Reports */}
+        <div className="bg-white rounded-xl shadow p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
+          <div className="bg-purple-100 text-purple-600 p-2 sm:p-3 rounded-lg shrink-0">
+            <FaCalendarAlt className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
-          <div>
-            <p className="text-xs text-gray-500">{prevMonthLabel} Reports</p>
-            <p className="text-2xl font-bold text-gray-800">
+          <div className="min-w-0">
+            <p className="text-xs text-gray-500 truncate">
+              {prevMonthLabel} Reports
+            </p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-800">
               {prevMonthReports}
             </p>
-            <div className="flex gap-2 mt-0.5">
-              <span className="text-xs text-green-600 font-medium">
+            <div className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 mt-0.5">
+              <span className="text-xs text-green-600 font-medium whitespace-nowrap">
                 ✓ {prevMonthApproved} approved
               </span>
-              <span className="text-xs text-red-500 font-medium">
+              <span className="text-xs text-red-500 font-medium whitespace-nowrap">
                 ● {prevMonthPending} pending
               </span>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex items-center gap-3">
-          <div className="bg-green-100 text-green-600 p-3 rounded-lg">
-            <FaUsers className="h-5 w-5" />
+
+        {/* Total Users */}
+        <div className="bg-white rounded-xl shadow p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
+          <div className="bg-green-100 text-green-600 p-2 sm:p-3 rounded-lg shrink-0">
+            <FaUsers className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Total Users</p>
-            <p className="text-2xl font-bold text-gray-800">{totalUsers}</p>
+          <div className="min-w-0">
+            <p className="text-xs text-gray-500 truncate">Total Users</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-800">
+              {totalUsers}
+            </p>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow p-4 border border-gray-100 flex items-center gap-3">
-          <div className="bg-yellow-100 text-yellow-600 p-3 rounded-lg">
-            <FaUserShield className="h-5 w-5" />
+
+        {/* Total Admins */}
+        <div className="bg-white rounded-xl shadow p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
+          <div className="bg-yellow-100 text-yellow-600 p-2 sm:p-3 rounded-lg shrink-0">
+            <FaUserShield className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
-          <div>
-            <p className="text-xs text-gray-500">Total Admins</p>
-            <p className="text-2xl font-bold text-gray-800">{totalAdmins}</p>
+          <div className="min-w-0">
+            <p className="text-xs text-gray-500 truncate">Total Admins</p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-800">
+              {totalAdmins}
+            </p>
           </div>
         </div>
       </div>
@@ -349,9 +386,33 @@ export default function AdminPanel() {
       {/* ==================== REPORTS TAB ==================== */}
       {activeTab === "reports" && (
         <>
-          <p className="text-sm text-gray-500 mb-3">
-            {reports.length} total reports
-          </p>
+          {/* ✅ BULK DOWNLOAD HEADER */}
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-3">
+            <p className="text-sm text-gray-500">
+              {reports.length} total reports
+            </p>
+            <div className="flex gap-2 items-center">
+              <select
+                value={bulkMonth}
+                onChange={(e) => setBulkMonth(e.target.value)}
+                className="input cursor-pointer text-sm py-1.5 w-44"
+              >
+                <option value="">All months</option>
+                {MONTHS.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+              <button
+                onClick={handleBulkDownload}
+                className="cursor-pointer flex items-center gap-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 text-sm whitespace-nowrap"
+              >
+                <FaDownload /> Download Excel
+              </button>
+            </div>
+          </div>
+
           {loadingReports ? (
             <div className="flex justify-center items-center h-40">
               <Spinner className="h-10 w-10 text-blue-600" />
@@ -384,7 +445,8 @@ export default function AdminPanel() {
                     <p className="text-sm text-gray-600 mb-3">
                       ⛪ {r.churchName}
                     </p>
-                    <div className="flex justify-end">
+                    {/* ✅ MOBILE ACTIONS */}
+                    <div className="flex gap-2 justify-end">
                       <button
                         onClick={() => toggleComplete(r._id)}
                         disabled={togglingId === r._id}
@@ -398,6 +460,13 @@ export default function AdminPanel() {
                           <FaCheck className="h-3 w-3" />
                         )}
                         {r.completed ? "Unapprove" : "Approve"}
+                      </button>
+                      {/* ✅ Individual download */}
+                      <button
+                        onClick={() => exportSingleReport(r)}
+                        className="cursor-pointer flex items-center gap-1 text-sm px-3 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700"
+                      >
+                        <FaDownload className="h-3 w-3" /> Excel
                       </button>
                     </div>
                   </div>
@@ -415,6 +484,7 @@ export default function AdminPanel() {
                       <th className="p-3">CHURCH</th>
                       <th className="p-3">STATUS</th>
                       <th className="p-3">ACTION</th>
+                      <th className="p-3">DOWNLOAD</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -448,6 +518,16 @@ export default function AdminPanel() {
                                 <FaCheck className="h-3 w-3" /> Approve
                               </>
                             )}
+                          </button>
+                        </td>
+                        {/* ✅ Individual download */}
+                        <td className="p-3">
+                          <button
+                            onClick={() => exportSingleReport(r)}
+                            title="Download as Excel"
+                            className="cursor-pointer flex items-center gap-1 text-sm text-green-600 hover:text-green-800"
+                          >
+                            <FaDownload /> Excel
                           </button>
                         </td>
                       </tr>
@@ -752,7 +832,7 @@ export default function AdminPanel() {
         </>
       )}
 
-      {/* ==================== USER FORM MODAL ==================== */}
+      {/* USER FORM MODAL */}
       {showUserForm && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md">
@@ -782,8 +862,6 @@ export default function AdminPanel() {
                 onChange={handleUserFormChange}
                 className="input"
               />
-
-              {/* ✅ PASSWORD WITH SHOW/HIDE */}
               <div className="relative">
                 <input
                   name="password"
@@ -805,7 +883,6 @@ export default function AdminPanel() {
                   {showUserPassword ? <FaEyeSlash /> : <FaEye />}
                 </button>
               </div>
-
               <select
                 name="role"
                 value={userForm.role}
