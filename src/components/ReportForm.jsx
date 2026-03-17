@@ -111,7 +111,7 @@ export default function ReportForm({ reportId }) {
         <button
           type="button"
           onClick={() => navigate("/")}
-          className="flex items-center gap-1 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-2 rounded-lg transition"
+          className="cursor-pointer flex items-center gap-1 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-2 rounded-lg transition"
         >
           ← Back
         </button>
@@ -345,7 +345,7 @@ export default function ReportForm({ reportId }) {
 
       {/* SUBMIT BUTTON */}
       <button
-        className="submit-btn w-full sm:w-auto flex items-center justify-center gap-2 disabled:opacity-50"
+        className="cursor-pointer submit-btn w-full sm:w-auto flex items-center justify-center gap-2 disabled:opacity-50"
         disabled={loading}
       >
         {loading ? (

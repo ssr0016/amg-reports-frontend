@@ -5,9 +5,11 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import API from "../services/api";
 import Spinner from "./Spinner";
+import { useAuth } from "../context/AuthContext";
 
 export default function ReportList({ reports }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [confirmId, setConfirmId] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -32,13 +34,17 @@ export default function ReportList({ reports }) {
     }
   };
 
+  const canModify = (report) => {
+    return user?.role === "admin" || report.createdBy === user?.id;
+  };
+
   if (!reports || reports.length === 0) {
     return <p className="text-gray-500 mt-6">No reports found</p>;
   }
 
   return (
     <>
-      {/* ✅ CARD LAYOUT — mobile only */}
+      {/* CARD LAYOUT — mobile only */}
       <div className="flex flex-col gap-3 sm:hidden">
         {reports.map((r) => (
           <div
@@ -50,7 +56,6 @@ export default function ReportList({ reports }) {
                 <p className="font-semibold text-gray-800">{r.worker}</p>
                 <p className="text-sm text-gray-500">{r.month}</p>
               </div>
-              {/* STATUS BADGE */}
               <span
                 className={`px-2 py-1 rounded-full text-xs font-semibold ${
                   r.completed === true
@@ -65,34 +70,35 @@ export default function ReportList({ reports }) {
             <p className="text-sm text-gray-600 mb-1">📍 {r.areaAssignment}</p>
             <p className="text-sm text-gray-600 mb-3">⛪ {r.churchName}</p>
 
-            {/* ACTIONS */}
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => handleEdit(r._id)}
-                disabled={editingId === r._id}
-                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
-              >
-                {editingId === r._id ? (
-                  <Spinner className="h-4 w-4" />
-                ) : (
-                  <FaEdit />
-                )}
-                Edit
-              </button>
-              <button
-                onClick={() => setConfirmId(r._id)}
-                disabled={deleting}
-                className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
-              >
-                <FaTrash />
-                Delete
-              </button>
-            </div>
+            {canModify(r) && (
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => handleEdit(r._id)}
+                  disabled={editingId === r._id}
+                  className="cursor-pointer flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                >
+                  {editingId === r._id ? (
+                    <Spinner className="h-4 w-4" />
+                  ) : (
+                    <FaEdit />
+                  )}
+                  Edit
+                </button>
+                <button
+                  onClick={() => setConfirmId(r._id)}
+                  disabled={deleting}
+                  className="cursor-pointer flex items-center gap-1 text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
+                >
+                  <FaTrash />
+                  Delete
+                </button>
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {/* ✅ TABLE LAYOUT — desktop only */}
+      {/* TABLE LAYOUT — desktop only */}
       <div className="hidden sm:block bg-white shadow rounded-lg overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-gray-100">
@@ -123,25 +129,31 @@ export default function ReportList({ reports }) {
                     {r.completed ? "Approved" : "For Review"}
                   </span>
                 </td>
-                <td className="p-3 flex gap-4 items-center">
-                  <button
-                    onClick={() => handleEdit(r._id)}
-                    disabled={editingId === r._id}
-                    className="text-blue-600 hover:text-blue-800 disabled:opacity-50"
-                  >
-                    {editingId === r._id ? (
-                      <Spinner className="h-4 w-4 text-blue-600" />
-                    ) : (
-                      <FaEdit />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => setConfirmId(r._id)}
-                    disabled={deleting}
-                    className="text-red-600 hover:text-red-800 disabled:opacity-50"
-                  >
-                    <FaTrash />
-                  </button>
+                <td className="p-3 flex gap-4 items-center min-h-[48px]">
+                  {canModify(r) ? (
+                    <>
+                      <button
+                        onClick={() => handleEdit(r._id)}
+                        disabled={editingId === r._id}
+                        className="cursor-pointer text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                      >
+                        {editingId === r._id ? (
+                          <Spinner className="h-4 w-4 text-blue-600" />
+                        ) : (
+                          <FaEdit />
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setConfirmId(r._id)}
+                        disabled={deleting}
+                        className="cursor-pointer text-red-600 hover:text-red-800 disabled:opacity-50"
+                      >
+                        <FaTrash />
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-xs text-gray-400">—</span>
+                  )}
                 </td>
               </tr>
             ))}
@@ -164,14 +176,14 @@ export default function ReportList({ reports }) {
               <button
                 onClick={() => setConfirmId(null)}
                 disabled={deleting}
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm disabled:opacity-50"
+                className="cursor-pointer flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={deleteReport}
                 disabled={deleting}
-                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                className="cursor-pointer flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {deleting ? (
                   <>
