@@ -26,7 +26,7 @@ export default function FilterBar({ filters, setFilters }) {
 
       <input
         name="area"
-        placeholder="Area Assignment"
+        placeholder="Area Of Assignment"
         value={filters.area}
         onChange={handleChange}
         className="input"
