@@ -2,10 +2,17 @@
 
 .input {
   @apply border border-gray-200 rounded-lg p-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500;
+  font-size: 1rem; /* ✅ prevent iOS auto-zoom */
+  -webkit-appearance: none; /* ✅ fix iOS styling */
+  appearance: none;
 }
 
 .textarea {
   @apply border border-gray-200 rounded-lg p-3 w-full mb-4 min-h-[90px] focus:outline-none focus:ring-2 focus:ring-blue-500;
+  font-size: 1rem; /* ✅ prevent iOS auto-zoom */
+  -webkit-appearance: none; /* ✅ fix iOS styling */
+  appearance: none;
+  resize: vertical;
 }
 
 .section-title {
@@ -14,4 +21,7 @@
 
 .submit-btn {
   @apply bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition;
+  font-size: 1rem; /* ✅ prevent iOS auto-zoom */
+  -webkit-appearance: none;
+  appearance: none;
 }

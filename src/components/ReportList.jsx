@@ -9,8 +9,8 @@ import Spinner from "./Spinner";
 export default function ReportList({ reports }) {
   const navigate = useNavigate();
   const [confirmId, setConfirmId] = useState(null);
-  const [deleting, setDeleting] = useState(false); // ✅
-  const [editingId, setEditingId] = useState(null); // ✅
+  const [deleting, setDeleting] = useState(false);
+  const [editingId, setEditingId] = useState(null);
 
   const handleEdit = (id) => {
     setEditingId(id);
@@ -19,9 +19,8 @@ export default function ReportList({ reports }) {
 
   const deleteReport = async () => {
     if (!confirmId) return;
-
     try {
-      setDeleting(true); // ✅
+      setDeleting(true);
       await API.delete(`/reports/${confirmId}`);
       toast.success("Report deleted successfully!");
       setConfirmId(null);
@@ -29,7 +28,7 @@ export default function ReportList({ reports }) {
     } catch (error) {
       toast.error("Failed to delete report.");
     } finally {
-      setDeleting(false); // ✅
+      setDeleting(false);
     }
   };
 
@@ -39,19 +38,73 @@ export default function ReportList({ reports }) {
 
   return (
     <>
-      <div className="bg-white shadow rounded-lg overflow-x-auto">
+      {/* ✅ CARD LAYOUT — mobile only */}
+      <div className="flex flex-col gap-3 sm:hidden">
+        {reports.map((r) => (
+          <div
+            key={r._id}
+            className="bg-white shadow rounded-xl p-4 border border-gray-100"
+          >
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <p className="font-semibold text-gray-800">{r.worker}</p>
+                <p className="text-sm text-gray-500">{r.month}</p>
+              </div>
+              {/* STATUS BADGE */}
+              <span
+                className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                  r.completed === true
+                    ? "bg-green-100 text-green-700"
+                    : "bg-red-100 text-red-700"
+                }`}
+              >
+                {r.completed ? "Approved" : "For Review"}
+              </span>
+            </div>
+
+            <p className="text-sm text-gray-600 mb-1">📍 {r.areaAssignment}</p>
+            <p className="text-sm text-gray-600 mb-3">⛪ {r.churchName}</p>
+
+            {/* ACTIONS */}
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => handleEdit(r._id)}
+                disabled={editingId === r._id}
+                className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+              >
+                {editingId === r._id ? (
+                  <Spinner className="h-4 w-4" />
+                ) : (
+                  <FaEdit />
+                )}
+                Edit
+              </button>
+              <button
+                onClick={() => setConfirmId(r._id)}
+                disabled={deleting}
+                className="flex items-center gap-1 text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
+              >
+                <FaTrash />
+                Delete
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* ✅ TABLE LAYOUT — desktop only */}
+      <div className="hidden sm:block bg-white shadow rounded-lg overflow-x-auto">
         <table className="w-full text-left">
           <thead className="bg-gray-100">
             <tr>
-              <th className="p-3">Worker</th>
-              <th className="p-3">Month</th>
-              <th className="p-3">Area</th>
-              <th className="p-3">Church</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">Actions</th>
+              <th className="p-3">WORKER</th>
+              <th className="p-3">MONTH</th>
+              <th className="p-3">AREA OF ASSIGNMENT</th>
+              <th className="p-3">CHURCH</th>
+              <th className="p-3">STATUS</th>
+              <th className="p-3">ACTIONS</th>
             </tr>
           </thead>
-
           <tbody>
             {reports.map((r) => (
               <tr key={r._id} className="border-b hover:bg-gray-50">
@@ -59,7 +112,6 @@ export default function ReportList({ reports }) {
                 <td className="p-3">{r.month}</td>
                 <td className="p-3">{r.areaAssignment}</td>
                 <td className="p-3">{r.churchName}</td>
-
                 <td className="p-3">
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-semibold ${
@@ -71,9 +123,7 @@ export default function ReportList({ reports }) {
                     {r.completed ? "Approved" : "For Review"}
                   </span>
                 </td>
-
                 <td className="p-3 flex gap-4 items-center">
-                  {/* ✅ EDIT WITH SPINNER */}
                   <button
                     onClick={() => handleEdit(r._id)}
                     disabled={editingId === r._id}
@@ -85,8 +135,6 @@ export default function ReportList({ reports }) {
                       <FaEdit />
                     )}
                   </button>
-
-                  {/* ✅ DELETE WITH SPINNER */}
                   <button
                     onClick={() => setConfirmId(r._id)}
                     disabled={deleting}
@@ -103,8 +151,8 @@ export default function ReportList({ reports }) {
 
       {/* CONFIRM DELETE MODAL */}
       {confirmId && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-80 text-center">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm text-center">
             <div className="text-4xl mb-3">🗑️</div>
             <h2 className="text-lg font-semibold text-gray-800 mb-1">
               Delete Report?
@@ -116,16 +164,15 @@ export default function ReportList({ reports }) {
               <button
                 onClick={() => setConfirmId(null)}
                 disabled={deleting}
-                className="px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm disabled:opacity-50"
+                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={deleteReport}
                 disabled={deleting}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm disabled:opacity-50 flex items-center gap-2"
+                className="flex-1 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                {/* ✅ SPINNER SA DELETE BUTTON */}
                 {deleting ? (
                   <>
                     <Spinner className="h-4 w-4 text-white" />

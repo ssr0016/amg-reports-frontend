@@ -4,11 +4,14 @@ import ReportList from "../components/ReportList";
 import FilterBar from "../components/FilterBar";
 import { useNavigate } from "react-router-dom";
 
+const ITEMS_PER_PAGE = 26;
+
 function Dashboard() {
   const navigate = useNavigate();
 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [filters, setFilters] = useState({
     month: "",
@@ -24,9 +27,7 @@ function Dashboard() {
   const fetchReports = async () => {
     try {
       setLoading(true);
-
       const res = await API.get("/reports");
-      console.log(res.data);
       setReports(res.data.data);
     } catch (error) {
       console.error("Error fetching reports:", error);
@@ -48,14 +49,24 @@ function Dashboard() {
     );
   });
 
-  return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Ministry Reports</h1>
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
 
+  const totalPages = Math.ceil(filteredReports.length / ITEMS_PER_PAGE);
+  const paginatedReports = filteredReports.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE,
+  );
+
+  return (
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+      {/* HEADER */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold">Ministry Reports</h1>
         <button
           onClick={() => navigate("/create-report")}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+          className="w-full sm:w-auto bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm sm:text-base"
         >
           + Create Report
         </button>
@@ -68,7 +79,54 @@ function Dashboard() {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
       ) : (
-        <ReportList reports={filteredReports} />
+        <>
+          {/* REPORT COUNT */}
+          <p className="text-sm text-gray-500 mb-3">
+            Showing {paginatedReports.length} of {filteredReports.length}{" "}
+            reports
+          </p>
+
+          <ReportList reports={paginatedReports} />
+
+          {/* PAGINATION */}
+          {totalPages > 1 && (
+            <div className="flex justify-end items-center gap-1 sm:gap-2 mt-6 flex-wrap">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+                disabled={currentPage === 1}
+                className="px-2 sm:px-3 py-1 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+              >
+                ← Prev
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                (page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-2 sm:px-3 py-1 rounded-lg text-sm border ${
+                      currentPage === page
+                        ? "bg-blue-600 text-white border-blue-600"
+                        : "border-gray-300 text-gray-600 hover:bg-gray-100"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ),
+              )}
+
+              <button
+                onClick={() =>
+                  setCurrentPage((p) => Math.min(p + 1, totalPages))
+                }
+                disabled={currentPage === totalPages}
+                className="px-2 sm:px-3 py-1 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-40"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
