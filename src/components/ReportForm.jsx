@@ -7,7 +7,6 @@ import Spinner from "./Spinner";
 
 const defaultWeeks5 = { week1: "", week2: "", week3: "", week4: "", week5: "" };
 
-// ✅ ilabas sa labas — constant, hindi kailangan sa loob ng component
 const VALID_MONTHS = [
   "january",
   "february",
@@ -23,13 +22,11 @@ const VALID_MONTHS = [
   "december",
 ];
 
-// ✅ Helper — kunin ang month name mula sa input
 function parseMonthFromInput(input) {
   const lower = input.trim().toLowerCase();
   return VALID_MONTHS.find((m) => lower.includes(m));
 }
 
-// ✅ Helper — kunin ang year mula sa input, default ay current year
 function parseYearFromInput(input) {
   const match = input.match(/\d{4}/);
   return match ? parseInt(match[0]) : new Date().getFullYear();
@@ -81,7 +78,7 @@ export default function ReportForm({ reportId }) {
           setFetching(true);
           const res = await API.get(`/reports/${reportId}`);
           setForm(res.data.data);
-        } catch (error) {
+        } catch {
           toast.error("Failed to load report.");
         } finally {
           setFetching(false);
@@ -105,21 +102,18 @@ export default function ReportForm({ reportId }) {
   const submit = async (e) => {
     e.preventDefault();
 
-    // ✅ Required fields
     if (!form.month.trim()) return toast.error("Month is required.");
     if (!form.worker.trim()) return toast.error("Worker name is required.");
     if (!form.areaAssignment.trim())
       return toast.error("Area assignment is required.");
     if (!form.churchName.trim()) return toast.error("Church name is required.");
 
-    // ✅ Valid month name check
     const parsedMonth = parseMonthFromInput(form.month);
     if (!parsedMonth) {
       toast.error("Please enter a valid month (ex. February 2026).");
       return;
     }
 
-    // ✅ Apply sa BOTH create at edit — hindi pwedeng current o future month
     const parsedYear = parseYearFromInput(form.month);
     const now = new Date();
     const currentMonthIndex = now.getMonth();
@@ -147,7 +141,7 @@ export default function ReportForm({ reportId }) {
         await API.post("/reports", form);
         toast.success("Report created successfully!");
       }
-      setTimeout(() => navigate("/"), 1000);
+      navigate("/");
     } catch (error) {
       const message =
         error.response?.data?.message || "Failed to submit report.";
@@ -156,6 +150,7 @@ export default function ReportForm({ reportId }) {
       setLoading(false);
     }
   };
+
   if (fetching) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -186,34 +181,64 @@ export default function ReportForm({ reportId }) {
       {/* BASIC INFO */}
       <h3 className="section-title">Basic Information</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        <input
-          name="month"
-          placeholder="Month (ex. February 2026)"
-          onChange={handleChange}
-          value={form.month}
-          className="input"
-        />
-        <input
-          name="worker"
-          placeholder="Worker Name"
-          onChange={handleChange}
-          value={form.worker}
-          className="input"
-        />
-        <input
-          name="areaAssignment"
-          placeholder="Area Assignment"
-          onChange={handleChange}
-          value={form.areaAssignment}
-          className="input"
-        />
-        <input
-          name="churchName"
-          placeholder="Church Name"
-          onChange={handleChange}
-          value={form.churchName}
-          className="input"
-        />
+        <div className="flex flex-col gap-1">
+          <label htmlFor="month" className="text-sm font-medium text-gray-700">
+            Month
+          </label>
+          <input
+            id="month"
+            name="month"
+            placeholder="ex. February 2026"
+            onChange={handleChange}
+            value={form.month}
+            className="input"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="worker" className="text-sm font-medium text-gray-700">
+            Worker Name
+          </label>
+          <input
+            id="worker"
+            name="worker"
+            placeholder="Worker Name"
+            onChange={handleChange}
+            value={form.worker}
+            className="input"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="areaAssignment"
+            className="text-sm font-medium text-gray-700"
+          >
+            Area Assignment
+          </label>
+          <input
+            id="areaAssignment"
+            name="areaAssignment"
+            placeholder="Area Assignment"
+            onChange={handleChange}
+            value={form.areaAssignment}
+            className="input"
+          />
+        </div>
+        <div className="flex flex-col gap-1">
+          <label
+            htmlFor="churchName"
+            className="text-sm font-medium text-gray-700"
+          >
+            Church Name
+          </label>
+          <input
+            id="churchName"
+            name="churchName"
+            placeholder="Church Name"
+            onChange={handleChange}
+            value={form.churchName}
+            className="input"
+          />
+        </div>
       </div>
 
       {/* WEEKLY ATTENDANCE */}
@@ -377,34 +402,67 @@ export default function ReportForm({ reportId }) {
 
       {/* REPORT DETAILS */}
       <h3 className="section-title">Report Details</h3>
-      <textarea
-        name="names"
-        placeholder="Names of new believers / baptized"
-        onChange={handleChange}
-        value={form.names}
-        className="textarea"
-      />
-      <textarea
-        name="narrativeReport"
-        placeholder="Narrative Report"
-        onChange={handleChange}
-        value={form.narrativeReport}
-        className="textarea"
-      />
-      <textarea
-        name="challenges"
-        placeholder="Challenges"
-        onChange={handleChange}
-        value={form.challenges}
-        className="textarea"
-      />
-      <textarea
-        name="prayerRequest"
-        placeholder="Prayer Requests"
-        onChange={handleChange}
-        value={form.prayerRequest}
-        className="textarea"
-      />
+      <div className="flex flex-col gap-1 mb-4">
+        <label htmlFor="names" className="text-sm font-medium text-gray-700">
+          Names of new believers / baptized
+        </label>
+        <textarea
+          id="names"
+          name="names"
+          placeholder="Names of new believers / baptized"
+          onChange={handleChange}
+          value={form.names}
+          className="textarea"
+        />
+      </div>
+      <div className="flex flex-col gap-1 mb-4">
+        <label
+          htmlFor="narrativeReport"
+          className="text-sm font-medium text-gray-700"
+        >
+          Narrative Report
+        </label>
+        <textarea
+          id="narrativeReport"
+          name="narrativeReport"
+          placeholder="Narrative Report"
+          onChange={handleChange}
+          value={form.narrativeReport}
+          className="textarea"
+        />
+      </div>
+      <div className="flex flex-col gap-1 mb-4">
+        <label
+          htmlFor="challenges"
+          className="text-sm font-medium text-gray-700"
+        >
+          Challenges
+        </label>
+        <textarea
+          id="challenges"
+          name="challenges"
+          placeholder="Challenges"
+          onChange={handleChange}
+          value={form.challenges}
+          className="textarea"
+        />
+      </div>
+      <div className="flex flex-col gap-1 mb-4">
+        <label
+          htmlFor="prayerRequest"
+          className="text-sm font-medium text-gray-700"
+        >
+          Prayer Requests
+        </label>
+        <textarea
+          id="prayerRequest"
+          name="prayerRequest"
+          placeholder="Prayer Requests"
+          onChange={handleChange}
+          value={form.prayerRequest}
+          className="textarea"
+        />
+      </div>
 
       {/* SUBMIT BUTTON */}
       <button
@@ -426,7 +484,7 @@ export default function ReportForm({ reportId }) {
   );
 }
 
-// Section Component — 3 cols sa mobile, 5 cols sa desktop
+// Section Component — 3 cols on mobile, 5 cols on desktop
 function Section({ title, weeks, category, handler, values = {} }) {
   return (
     <>
@@ -435,9 +493,8 @@ function Section({ title, weeks, category, handler, values = {} }) {
         {Array.from({ length: weeks }, (_, i) => i + 1).map((w) => (
           <input
             key={w}
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
+            type="number"
+            min="0"
             placeholder={`Wk ${w}`}
             className="input text-sm"
             value={values[`week${w}`] ?? ""}

@@ -14,7 +14,12 @@ export function AuthProvider({ children }) {
     const savedToken = localStorage.getItem("token");
 
     if (savedUser && savedToken) {
-      setUser(JSON.parse(savedUser));
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch {
+        localStorage.removeItem("user");
+        localStorage.removeItem("token");
+      }
     }
     setLoadingAuth(false);
   }, []);
@@ -45,5 +50,7 @@ export function AuthProvider({ children }) {
 
 // ✅ custom hook para madaling gamitin
 export function useAuth() {
-  return useContext(AuthContext);
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used inside AuthProvider");
+  return ctx;
 }

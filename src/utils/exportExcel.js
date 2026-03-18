@@ -125,8 +125,9 @@ export function exportBulkReports(reports, month) {
   ];
   XLSX.utils.book_append_sheet(wb, summaryWs, "Summary");
 
-  // ✅ Individual sheet per worker
-  reports.forEach((report) => {
+  // Individual sheet per worker — deduplicate sheet names (XLSX limit: 31 chars)
+  const usedNames = new Set();
+  reports.forEach((report, i) => {
     const rows = reportToRows(report);
     const ws = XLSX.utils.aoa_to_sheet(rows);
     ws["!cols"] = [
@@ -139,7 +140,15 @@ export function exportBulkReports(reports, month) {
       { wch: 10 },
     ];
 
-    const sheetName = (report.worker || "Unknown").substring(0, 31);
+    let baseName = (report.worker || "Unknown").substring(0, 31);
+    let sheetName = baseName;
+    let counter = 1;
+    while (usedNames.has(sheetName)) {
+      const suffix = `_${counter}`;
+      sheetName = baseName.substring(0, 31 - suffix.length) + suffix;
+      counter++;
+    }
+    usedNames.add(sheetName);
     XLSX.utils.book_append_sheet(wb, ws, sheetName);
   });
 

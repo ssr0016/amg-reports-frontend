@@ -1,12 +1,13 @@
 // Dashboard.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import API from "../services/api";
 import ReportList from "../components/ReportList";
 import FilterBar from "../components/FilterBar";
+import Pagination from "../components/Pagination";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-
-const ITEMS_PER_PAGE = 26;
+import { ITEMS_PER_PAGE } from "../constants";
+import toast from "react-hot-toast";
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -23,11 +24,7 @@ function Dashboard() {
     church: "",
   });
 
-  useEffect(() => {
-    fetchReports();
-  }, []);
-
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     try {
       setLoading(true);
       const res = await API.get("/reports");
@@ -37,7 +34,11 @@ function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
 
   const filteredReports = reports.filter((r) => {
     return (
@@ -64,6 +65,7 @@ function Dashboard() {
 
   const handleLogout = () => {
     logout();
+    toast.success("Logged out successfully.");
     navigate("/login");
   };
 
@@ -129,45 +131,13 @@ function Dashboard() {
             reports
           </p>
 
-          <ReportList reports={paginatedReports} />
+          <ReportList reports={paginatedReports} onDelete={fetchReports} />
 
-          {totalPages > 1 && (
-            <div className="flex justify-end items-center gap-1 sm:gap-2 mt-6 flex-wrap">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                disabled={currentPage === 1}
-                className="cursor-pointer px-2 sm:px-3 py-1 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-40"
-              >
-                ← Prev
-              </button>
-
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                (page) => (
-                  <button
-                    key={page}
-                    onClick={() => setCurrentPage(page)}
-                    className={`cursor-pointer px-2 sm:px-3 py-1 rounded-lg text-sm border ${
-                      currentPage === page
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "border-gray-300 text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    {page}
-                  </button>
-                ),
-              )}
-
-              <button
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(p + 1, totalPages))
-                }
-                disabled={currentPage === totalPages}
-                className="cursor-pointer px-2 sm:px-3 py-1 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-40"
-              >
-                Next →
-              </button>
-            </div>
-          )}
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            setPage={setCurrentPage}
+          />
         </>
       )}
     </div>
