@@ -1,6 +1,6 @@
 // Login.jsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import Spinner from "../components/Spinner";
@@ -8,7 +8,10 @@ import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user, loadingAuth } = useAuth();
+
+  if (loadingAuth) return null;
+  if (user) return <Navigate to="/" replace />;
 
   const [form, setForm] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
