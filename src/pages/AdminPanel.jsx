@@ -260,7 +260,7 @@ export default function AdminPanel() {
         >
           ← Back
         </button>
-        <div>
+<div>
           <h1 className="text-2xl sm:text-3xl font-bold">Admin Panel</h1>
           <p className="text-sm text-gray-500">Manage reports and users</p>
         </div>

@@ -38,7 +38,7 @@ export default function Login() {
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
       <div className="bg-white shadow-lg rounded-xl p-8 w-full max-w-sm border border-gray-100">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-800">AMG Reports</h1>
+          <h1 className="text-2xl font-bold text-gray-800">AMGC Reports</h1>
           <p className="text-sm text-gray-500 mt-1">Sign in to your account</p>
         </div>
 
