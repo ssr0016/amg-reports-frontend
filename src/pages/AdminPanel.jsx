@@ -137,13 +137,19 @@ export default function AdminPanel() {
   };
 
   const handleBulkDownload = async () => {
-    if (reports.length === 0) {
-      toast.error(`No reports found for ${bulkMonth} ${bulkYear}.`);
+    // ✅ approved reports lang ang ida-download
+    const approvedReports = reports.filter((r) => r.completed === true);
+
+    if (approvedReports.length === 0) {
+      toast.error(`No approved reports found for ${bulkMonth} ${bulkYear}.`);
       return;
     }
+
     try {
-      await exportBulkReports(reports, `${bulkMonth} ${bulkYear}`);
-      toast.success(`Downloading ${reports.length} reports...`);
+      await exportBulkReports(approvedReports, `${bulkMonth} ${bulkYear}`);
+      toast.success(
+        `Downloading ${approvedReports.length} approved reports...`,
+      );
     } catch {
       toast.error("Failed to export reports.");
     }
