@@ -109,7 +109,7 @@ export default function AdminReportsTab({
                 <tr>
                   <th className="p-3">WORKER</th>
                   <th className="p-3">MONTH</th>
-                  <th className="p-3">AREA</th>
+                  <th className="p-3">AREA OF ASSIGNMENT</th>
                   <th className="p-3">CHURCH</th>
                   <th className="p-3">STATUS</th>
                   <th className="p-3">ACTION</th>

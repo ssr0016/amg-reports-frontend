@@ -93,7 +93,9 @@ export default function AdminTrackerTab({
                 <p className="font-semibold text-gray-800">{w.name}</p>
                 <p className="text-xs text-gray-500">@{w.username}</p>
                 {r && (
-                  <p className="text-xs text-gray-500 mt-0.5">⛪ {r.churchName}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    ⛪ {r.churchName}
+                  </p>
                 )}
                 {r && (
                   <p className="text-xs text-gray-500">📍 {r.areaAssignment}</p>
@@ -125,47 +127,49 @@ export default function AdminTrackerTab({
             <tr>
               <th className="p-3">WORKER</th>
               <th className="p-3">CHURCH</th>
-              <th className="p-3">AREA</th>
+              <th className="p-3">AREA OF ASSIGNMENT</th>
               <th className="p-3">SUBMITTED</th>
               <th className="p-3">STATUS</th>
             </tr>
           </thead>
           <tbody>
-            {trackerData.map(({ worker: w, report: r, submitted, approved }) => (
-              <tr
-                key={w._id}
-                className={`border-b ${!submitted ? "bg-red-50" : "hover:bg-gray-50"}`}
-              >
-                <td className="p-3">
-                  <p className="font-medium text-gray-800">{w.name}</p>
-                  <p className="text-xs text-gray-500">@{w.username}</p>
-                </td>
-                <td className="p-3 text-sm text-gray-600">
-                  {r?.churchName || "—"}
-                </td>
-                <td className="p-3 text-sm text-gray-600">
-                  {r?.areaAssignment || "—"}
-                </td>
-                <td className="p-3">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${submitted ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}
-                  >
-                    {submitted ? "✓ Submitted" : "✗ Not Yet"}
-                  </span>
-                </td>
-                <td className="p-3">
-                  {submitted ? (
+            {trackerData.map(
+              ({ worker: w, report: r, submitted, approved }) => (
+                <tr
+                  key={w._id}
+                  className={`border-b ${!submitted ? "bg-red-50" : "hover:bg-gray-50"}`}
+                >
+                  <td className="p-3">
+                    <p className="font-medium text-gray-800">{w.name}</p>
+                    <p className="text-xs text-gray-500">@{w.username}</p>
+                  </td>
+                  <td className="p-3 text-sm text-gray-600">
+                    {r?.churchName || "—"}
+                  </td>
+                  <td className="p-3 text-sm text-gray-600">
+                    {r?.areaAssignment || "—"}
+                  </td>
+                  <td className="p-3">
                     <span
-                      className={`px-2 py-1 rounded-full text-xs font-semibold ${approved ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}
+                      className={`px-2 py-1 rounded-full text-xs font-semibold ${submitted ? "bg-green-100 text-green-700" : "bg-red-100 text-red-600"}`}
                     >
-                      {approved ? "Approved" : "For Review"}
+                      {submitted ? "✓ Submitted" : "✗ Not Yet"}
                     </span>
-                  ) : (
-                    <span className="text-xs text-gray-400">—</span>
-                  )}
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="p-3">
+                    {submitted ? (
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-semibold ${approved ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}
+                      >
+                        {approved ? "Approved" : "For Review"}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </td>
+                </tr>
+              ),
+            )}
           </tbody>
         </table>
       </div>
