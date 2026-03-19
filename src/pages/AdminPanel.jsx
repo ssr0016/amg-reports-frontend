@@ -58,10 +58,14 @@ export default function AdminPanel() {
   const [showUserPassword, setShowUserPassword] = useState(false);
 
   const [activeTab, setActiveTab] = useState("reports");
-  const [bulkMonth, setBulkMonth] = useState("");
 
+  // ✅ default na ang previous month, hindi na blank
   const currentYear = new Date().getFullYear();
   const prevMonthIndex = new Date().getMonth() - 1;
+  const [bulkMonth, setBulkMonth] = useState(
+    MONTHS[prevMonthIndex >= 0 ? prevMonthIndex : 11],
+  );
+
   const [trackerMonth, setTrackerMonth] = useState(
     MONTHS[prevMonthIndex] ?? MONTHS[11],
   );
@@ -113,11 +117,9 @@ export default function AdminPanel() {
   };
 
   const handleBulkDownload = async () => {
-    const filtered = bulkMonth
-      ? reports.filter((r) =>
-          r.month?.toLowerCase().includes(bulkMonth.toLowerCase()),
-        )
-      : reports;
+    const filtered = reports.filter((r) =>
+      r.month?.toLowerCase().includes(bulkMonth.toLowerCase()),
+    );
 
     if (filtered.length === 0) {
       toast.error("No reports found for selected month.");
@@ -125,7 +127,7 @@ export default function AdminPanel() {
     }
 
     try {
-      await exportBulkReports(filtered, bulkMonth || "All");
+      await exportBulkReports(filtered, bulkMonth);
       toast.success(`Downloading ${filtered.length} reports...`);
     } catch {
       toast.error("Failed to export reports.");
@@ -204,6 +206,7 @@ export default function AdminPanel() {
       toast.success("User deleted successfully!");
       setConfirmDeleteUserId(null);
       fetchUsers();
+      fetchReports(); // ✅ i-refresh ang reports after mag-delete ng user
     } catch {
       toast.error("Failed to delete user.");
     } finally {

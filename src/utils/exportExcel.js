@@ -104,7 +104,7 @@ function buildSheet(ws, report) {
 
   // Rows 4–7 — Info fields
   [
-    [4, "Month of:", report.month || ""],
+    [4, "Month of:", `${report.month || ""} ${report.year || ""}`], // ✅ added year
     [5, "Worker", report.worker || ""],
     [6, "Area of Assignment", report.areaAssignment || ""],
     [7, "Name of Church/Outreach:", report.churchName || ""],
@@ -268,10 +268,10 @@ export async function exportSingleReport(report) {
   buildSheet(wb.addWorksheet("Report"), report);
 
   const fileName =
-    `${report.worker || "Report"}_${report.month || "Unknown"}.xlsx`.replace(
+    `${report.worker || "Report"}_${report.month || "Unknown"}_${report.year || ""}.xlsx`.replace(
       /\s+/g,
       "_",
-    );
+    ); // ✅ added year sa filename
 
   const buffer = await wb.xlsx.writeBuffer();
   saveAs(new Blob([buffer], { type: "application/octet-stream" }), fileName);
@@ -286,13 +286,15 @@ export async function exportBulkReports(reports, month) {
   const dash = wb.addWorksheet("Report Dashboard");
   dash.columns = [
     { width: 38 }, // A - Churches
-    { width: 14 }, // B - Status
-    { width: 22 }, // C - Coordinator Remark
-    { width: 18 }, // D - Support Status
+    { width: 14 }, // B - Month
+    { width: 10 }, // C - Year  ✅ new column
+    { width: 14 }, // D - Status
+    { width: 22 }, // E - Coordinator Remark
+    { width: 18 }, // F - Support Status
   ];
 
-  // Title row
-  dash.mergeCells("A1:D1");
+  // Title row — ✅ extended to F1
+  dash.mergeCells("A1:F1");
   const titleCell = dash.getRow(1).getCell(1);
   titleCell.value = "Report Dashboard";
   titleCell.font = {
@@ -309,9 +311,11 @@ export async function exportBulkReports(reports, month) {
   };
   dash.getRow(1).height = 30;
 
-  // Header row
+  // Header row — ✅ added Month and Year columns
   const headers = [
     "Churches",
+    "Month",
+    "Year",
     "Status",
     "Coordinator's Remark",
     "Support Status",
@@ -323,12 +327,7 @@ export async function exportBulkReports(reports, month) {
     cell.value = h;
     cell.font = { name: "Arial", bold: true, size: 10 };
     cell.alignment = { horizontal: "center", vertical: "middle" };
-    cell.border = {
-      top: { style: "thin" },
-      left: { style: "thin" },
-      bottom: { style: "thin" },
-      right: { style: "thin" },
-    };
+    cell.border = BORDER_THIN;
     cell.fill = {
       type: "pattern",
       pattern: "solid",
@@ -341,21 +340,30 @@ export async function exportBulkReports(reports, month) {
     const row = dash.getRow(i + 3);
     row.height = 16;
 
-    // Church name
+    // A — Church name
     const churchCell = row.getCell(1);
     churchCell.value = r.churchName || r.worker || "";
     churchCell.font = { name: "Arial", size: 10 };
     churchCell.alignment = { horizontal: "left", vertical: "middle" };
-    churchCell.border = {
-      top: { style: "thin" },
-      left: { style: "thin" },
-      bottom: { style: "thin" },
-      right: { style: "thin" },
-    };
+    churchCell.border = BORDER_THIN;
 
-    // Status with color
-    const statusCell = row.getCell(2);
+    // B — Month ✅
+    const monthCell = row.getCell(2);
+    monthCell.value = r.month || "";
+    monthCell.font = { name: "Arial", size: 10 };
+    monthCell.alignment = { horizontal: "center", vertical: "middle" };
+    monthCell.border = BORDER_THIN;
+
+    // C — Year ✅
+    const yearCell = row.getCell(3);
+    yearCell.value = r.year || "";
+    yearCell.font = { name: "Arial", bold: true, size: 10 };
+    yearCell.alignment = { horizontal: "center", vertical: "middle" };
+    yearCell.border = BORDER_THIN;
+
+    // D — Status with color
     const approved = r.completed === true;
+    const statusCell = row.getCell(4);
     statusCell.value = approved ? "Approved" : "For Review";
     statusCell.font = {
       name: "Arial",
@@ -369,15 +377,10 @@ export async function exportBulkReports(reports, month) {
       pattern: "solid",
       fgColor: { argb: approved ? "FF00AA00" : "FFCC0000" },
     };
-    statusCell.border = {
-      top: { style: "thin" },
-      left: { style: "thin" },
-      bottom: { style: "thin" },
-      right: { style: "thin" },
-    };
+    statusCell.border = BORDER_THIN;
 
-    // Coordinator Remark (dropdown)
-    const remarkCell = row.getCell(3);
+    // E — Coordinator Remark
+    const remarkCell = row.getCell(5);
     remarkCell.value = "Checked";
     remarkCell.font = {
       name: "Arial",
@@ -391,15 +394,10 @@ export async function exportBulkReports(reports, month) {
       pattern: "solid",
       fgColor: { argb: "FF0000CC" },
     };
-    remarkCell.border = {
-      top: { style: "thin" },
-      left: { style: "thin" },
-      bottom: { style: "thin" },
-      right: { style: "thin" },
-    };
+    remarkCell.border = BORDER_THIN;
 
-    // Support Status
-    const supportCell = row.getCell(4);
+    // F — Support Status
+    const supportCell = row.getCell(6);
     supportCell.value = approved ? "Ready for Pick Up" : "On Hold";
     supportCell.font = {
       name: "Arial",
@@ -413,12 +411,7 @@ export async function exportBulkReports(reports, month) {
       pattern: "solid",
       fgColor: { argb: approved ? "FF0000CC" : "FFFFFF00" },
     };
-    supportCell.border = {
-      top: { style: "thin" },
-      left: { style: "thin" },
-      bottom: { style: "thin" },
-      right: { style: "thin" },
-    };
+    supportCell.border = BORDER_THIN;
   });
 
   // One sheet per church
@@ -438,7 +431,12 @@ export async function exportBulkReports(reports, month) {
     buildSheet(wb.addWorksheet(name), report);
   });
 
-  const fileName = `Reports_${month || "All"}.xlsx`.replace(/\s+/g, "_");
+  // ✅ added year sa bulk filename din
+  const fileName =
+    `Reports_${month || "All"}_${new Date().getFullYear()}.xlsx`.replace(
+      /\s+/g,
+      "_",
+    );
   const buffer = await wb.xlsx.writeBuffer();
   saveAs(new Blob([buffer], { type: "application/octet-stream" }), fileName);
 }
