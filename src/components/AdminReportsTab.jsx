@@ -1,9 +1,11 @@
+// /src/components/AdminReportsTab.jsx
+import { useState } from "react";
 import { FaCheck, FaUndo, FaDownload, FaChevronDown } from "react-icons/fa";
 import Spinner from "./Spinner";
 import Pagination from "./Pagination";
+import ExcelPreviewModal from "./ExcelPreviewModal";
 import { exportSingleReport } from "../utils/exportExcel";
 import { MONTHS } from "../constants";
-import toast from "react-hot-toast";
 
 const currentYear = new Date().getFullYear();
 const YEARS = [currentYear, currentYear - 1, currentYear - 2];
@@ -23,42 +25,36 @@ export default function AdminReportsTab({
   setBulkYear,
   onBulkDownload,
 }) {
-  const handleDownload = async (r) => {
-    await exportSingleReport(r);
+  // ── Preview modal state ──────────────────────────────────────────────────────
+  const [previewModal, setPreviewModal] = useState({
+    show: false,
+    mode: null, // "single" | "bulk"
+    report: null,
+  });
+
+  // Open single-report preview
+  const openSinglePreview = (r) => {
+    setPreviewModal({ show: true, mode: "single", report: r });
   };
 
-  const handleBulkDownloadClick = () => {
-    toast(
-      (t) => (
-        <div className="flex flex-col gap-2">
-          <p className="text-sm font-medium text-gray-800">
-            Download all{" "}
-            <span className="text-blue-600 font-semibold">
-              {bulkMonth} {bulkYear}
-            </span>{" "}
-            reports?
-          </p>
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={() => toast.dismiss(t.id)}
-              className="cursor-pointer text-sm px-3 py-1 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => {
-                toast.dismiss(t.id);
-                onBulkDownload();
-              }}
-              className="cursor-pointer text-sm px-3 py-1 rounded-lg bg-green-600 hover:bg-green-700 text-white"
-            >
-              Download
-            </button>
-          </div>
-        </div>
-      ),
-      { duration: 6000 },
-    );
+  // Open bulk preview
+  const openBulkPreview = () => {
+    setPreviewModal({ show: true, mode: "bulk", report: null });
+  };
+
+  const closePreview = () => {
+    setPreviewModal({ show: false, mode: null, report: null });
+  };
+
+  // Actual download handlers (called after user confirms in modal)
+  const handleConfirmSingleDownload = async () => {
+    if (previewModal.report) {
+      await exportSingleReport(previewModal.report);
+    }
+  };
+
+  const handleConfirmBulkDownload = () => {
+    onBulkDownload();
   };
 
   return (
@@ -66,7 +62,7 @@ export default function AdminReportsTab({
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-3">
         <p className="text-sm text-gray-500">{reports.length} total reports</p>
         <div className="flex gap-2 items-end">
-          {/* ✅ Month dropdown */}
+          {/* Month dropdown */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Select Month
@@ -87,7 +83,7 @@ export default function AdminReportsTab({
             </div>
           </div>
 
-          {/* ✅ Year dropdown */}
+          {/* Year dropdown */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Select Year
@@ -108,8 +104,9 @@ export default function AdminReportsTab({
             </div>
           </div>
 
+          {/* ✅ Bulk Download — now opens preview first */}
           <button
-            onClick={handleBulkDownloadClick}
+            onClick={openBulkPreview}
             className="cursor-pointer flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium whitespace-nowrap shadow-sm transition self-end"
           >
             <FaDownload /> Download Excel
@@ -122,7 +119,6 @@ export default function AdminReportsTab({
           <Spinner className="h-10 w-10 text-blue-600" />
         </div>
       ) : reports.length === 0 ? (
-        // ✅ empty state — kapag walang reports sa selected month + year
         <div className="flex flex-col items-center justify-center h-40 text-gray-400">
           <p className="text-lg font-medium">No reports found</p>
           <p className="text-sm">
@@ -170,8 +166,9 @@ export default function AdminReportsTab({
                     )}
                     {r.completed ? "Unapprove" : "Approve"}
                   </button>
+                  {/* ✅ Single Excel — opens preview */}
                   <button
-                    onClick={() => handleDownload(r)}
+                    onClick={() => openSinglePreview(r)}
                     className="cursor-pointer flex items-center gap-1 text-sm px-3 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700"
                   >
                     <FaDownload className="h-3 w-3" /> Excel
@@ -231,9 +228,10 @@ export default function AdminReportsTab({
                       </button>
                     </td>
                     <td className="p-3">
+                      {/* ✅ Single Excel — opens preview first */}
                       <button
-                        onClick={() => handleDownload(r)}
-                        title="Download as Excel"
+                        onClick={() => openSinglePreview(r)}
+                        title="Preview & Download as Excel"
                         className="cursor-pointer flex items-center gap-1 text-sm text-green-600 hover:text-green-800"
                       >
                         <FaDownload /> Excel
@@ -252,6 +250,21 @@ export default function AdminReportsTab({
           />
         </>
       )}
+
+      {/* ✅ Preview Modal */}
+      <ExcelPreviewModal
+        show={previewModal.show}
+        onClose={closePreview}
+        onConfirmDownload={
+          previewModal.mode === "bulk"
+            ? handleConfirmBulkDownload
+            : handleConfirmSingleDownload
+        }
+        report={previewModal.mode === "single" ? previewModal.report : null}
+        reports={previewModal.mode === "bulk" ? reports : null}
+        bulkMonth={bulkMonth}
+        bulkYear={bulkYear}
+      />
     </>
   );
 }
