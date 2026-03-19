@@ -10,12 +10,12 @@ export default function Login() {
   const navigate = useNavigate();
   const { login, user, loadingAuth } = useAuth();
 
-  if (loadingAuth) return null;
-  if (user) return <Navigate to="/" replace />;
-
   const [form, setForm] = useState({ username: "", password: "" });
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // ✅
+  const [showPassword, setShowPassword] = useState(false);
+
+  if (loadingAuth) return null;
+  if (user) return <Navigate to="/" replace />;
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
