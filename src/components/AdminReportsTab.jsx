@@ -25,53 +25,43 @@ export default function AdminReportsTab({
   setBulkYear,
   onBulkDownload,
 }) {
-  // ── Preview modal state ──────────────────────────────────────────────────────
   const [previewModal, setPreviewModal] = useState({
     show: false,
-    mode: null, // "single" | "bulk"
+    mode: null,
     report: null,
   });
 
-  // Open single-report preview
-  const openSinglePreview = (r) => {
+  const openSinglePreview = (r) =>
     setPreviewModal({ show: true, mode: "single", report: r });
-  };
 
-  // Open bulk preview
-  const openBulkPreview = () => {
+  const openBulkPreview = () =>
     setPreviewModal({ show: true, mode: "bulk", report: null });
-  };
 
-  const closePreview = () => {
+  const closePreview = () =>
     setPreviewModal({ show: false, mode: null, report: null });
-  };
 
-  // Actual download handlers (called after user confirms in modal)
   const handleConfirmSingleDownload = async () => {
-    if (previewModal.report) {
-      await exportSingleReport(previewModal.report);
-    }
-  };
-
-  const handleConfirmBulkDownload = () => {
-    onBulkDownload();
+    if (previewModal.report) await exportSingleReport(previewModal.report);
   };
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-3">
+      {/* ── TOOLBAR ── */}
+      <div className="flex flex-col gap-3 mb-4">
         <p className="text-sm text-gray-500">{reports.length} total reports</p>
-        <div className="flex gap-2 items-end">
-          {/* Month dropdown */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Select Month
+
+        {/* Controls — wrap nicely on mobile */}
+        <div className="flex flex-wrap gap-2 items-end">
+          {/* Month */}
+          <div className="flex flex-col gap-1 flex-1 min-w-[130px]">
+            <label className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Month
             </label>
             <div className="relative">
               <select
                 value={bulkMonth}
                 onChange={(e) => setBulkMonth(e.target.value)}
-                className="cursor-pointer appearance-none bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 text-sm font-medium rounded-lg pl-3 pr-8 py-2 w-40 transition outline-none shadow-sm"
+                className="cursor-pointer w-full appearance-none bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 text-sm font-medium rounded-lg pl-3 pr-8 py-2 transition outline-none shadow-sm"
               >
                 {MONTHS.map((m) => (
                   <option key={m} value={m}>
@@ -83,16 +73,16 @@ export default function AdminReportsTab({
             </div>
           </div>
 
-          {/* Year dropdown */}
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Select Year
+          {/* Year */}
+          <div className="flex flex-col gap-1 w-[100px] sm:w-[110px]">
+            <label className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Year
             </label>
             <div className="relative">
               <select
                 value={bulkYear}
                 onChange={(e) => setBulkYear(parseInt(e.target.value))}
-                className="cursor-pointer appearance-none bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 text-sm font-medium rounded-lg pl-3 pr-8 py-2 w-28 transition outline-none shadow-sm"
+                className="cursor-pointer w-full appearance-none bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 text-sm font-medium rounded-lg pl-3 pr-8 py-2 transition outline-none shadow-sm"
               >
                 {YEARS.map((y) => (
                   <option key={y} value={y}>
@@ -104,58 +94,72 @@ export default function AdminReportsTab({
             </div>
           </div>
 
-          {/* ✅ Bulk Download — now opens preview first */}
+          {/* Bulk Download — full width on mobile */}
           <button
             onClick={openBulkPreview}
-            className="cursor-pointer flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium whitespace-nowrap shadow-sm transition self-end"
+            className="cursor-pointer flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium whitespace-nowrap shadow-sm transition self-end w-full sm:w-auto"
           >
-            <FaDownload /> Download Excel
+            <FaDownload className="shrink-0" />
+            <span>Download Excel</span>
           </button>
         </div>
       </div>
 
+      {/* ── STATES ── */}
       {loading ? (
         <div className="flex justify-center items-center h-40">
           <Spinner className="h-10 w-10 text-blue-600" />
         </div>
       ) : reports.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-40 text-gray-400">
-          <p className="text-lg font-medium">No reports found</p>
+        <div className="flex flex-col items-center justify-center h-40 text-gray-400 text-center px-4">
+          <p className="text-base font-medium">No reports found</p>
           <p className="text-sm">
             No reports submitted for {bulkMonth} {bulkYear} yet.
           </p>
         </div>
       ) : (
         <>
-          {/* MOBILE CARDS */}
+          {/* ── MOBILE CARDS (below sm) ── */}
           <div className="flex flex-col gap-3 sm:hidden">
             {paginatedReports.map((r) => (
               <div
                 key={r._id}
-                className="bg-white shadow rounded-xl p-4 border border-gray-100"
+                className="bg-white shadow-sm rounded-xl p-4 border border-gray-100"
               >
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <p className="font-semibold text-gray-800">{r.worker}</p>
-                    <p className="text-sm text-gray-500">
+                <div className="flex justify-between items-start gap-2 mb-2">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-gray-800 truncate">
+                      {r.worker}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
                       {r.month} {r.year}
                     </p>
                   </div>
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${r.completed ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                    className={`shrink-0 px-2 py-1 rounded-full text-[10px] font-semibold ${
+                      r.completed
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
                   >
                     {r.completed ? "Approved" : "For Review"}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 mb-1">
+                <p className="text-xs text-gray-500 mb-0.5 truncate">
                   📍 {r.areaAssignment}
                 </p>
-                <p className="text-sm text-gray-600 mb-3">⛪ {r.churchName}</p>
-                <div className="flex gap-2 justify-end">
+                <p className="text-xs text-gray-500 mb-3 truncate">
+                  ⛪ {r.churchName}
+                </p>
+                <div className="flex gap-2">
                   <button
                     onClick={() => onToggleComplete(r._id)}
                     disabled={togglingId === r._id}
-                    className={`cursor-pointer flex items-center gap-1 text-sm px-3 py-1 rounded-lg disabled:opacity-50 ${r.completed ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
+                    className={`cursor-pointer flex-1 flex items-center justify-center gap-1 text-xs px-3 py-2 rounded-lg disabled:opacity-50 transition ${
+                      r.completed
+                        ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                        : "bg-green-100 text-green-700 hover:bg-green-200"
+                    }`}
                   >
                     {togglingId === r._id ? (
                       <Spinner className="h-3 w-3" />
@@ -166,10 +170,9 @@ export default function AdminReportsTab({
                     )}
                     {r.completed ? "Unapprove" : "Approve"}
                   </button>
-                  {/* ✅ Single Excel — opens preview */}
                   <button
                     onClick={() => openSinglePreview(r)}
-                    className="cursor-pointer flex items-center gap-1 text-sm px-3 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700"
+                    className="cursor-pointer flex items-center justify-center gap-1 text-xs px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition"
                   >
                     <FaDownload className="h-3 w-3" /> Excel
                   </button>
@@ -178,41 +181,66 @@ export default function AdminReportsTab({
             ))}
           </div>
 
-          {/* DESKTOP TABLE */}
-          <div className="hidden sm:block bg-white shadow rounded-lg overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="p-3">WORKER</th>
-                  <th className="p-3">MONTH</th>
-                  <th className="p-3">YEAR</th>
-                  <th className="p-3">AREA OF ASSIGNMENT</th>
-                  <th className="p-3">CHURCH</th>
-                  <th className="p-3">STATUS</th>
-                  <th className="p-3">ACTION</th>
-                  <th className="p-3">DOWNLOAD</th>
+          {/* ── DESKTOP TABLE (sm+) ── */}
+          <div className="hidden sm:block bg-white shadow-sm rounded-xl border border-gray-100 overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-200">
+                  {[
+                    "Worker",
+                    "Month",
+                    "Year",
+                    "Area of Assignment",
+                    "Church",
+                    "Status",
+                    "Action",
+                    "Download",
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gray-100">
                 {paginatedReports.map((r) => (
-                  <tr key={r._id} className="border-b hover:bg-gray-50">
-                    <td className="p-3">{r.worker}</td>
-                    <td className="p-3">{r.month}</td>
-                    <td className="p-3">{r.year}</td>
-                    <td className="p-3">{r.areaAssignment}</td>
-                    <td className="p-3">{r.churchName}</td>
-                    <td className="p-3">
+                  <tr key={r._id} className="hover:bg-gray-50 transition">
+                    <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">
+                      {r.worker}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                      {r.month}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600">{r.year}</td>
+                    <td className="px-4 py-3 text-gray-600 max-w-[180px] truncate">
+                      {r.areaAssignment}
+                    </td>
+                    <td className="px-4 py-3 text-gray-600 max-w-[160px] truncate">
+                      {r.churchName}
+                    </td>
+                    <td className="px-4 py-3">
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-semibold ${r.completed ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                        className={`px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                          r.completed
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
                       >
                         {r.completed ? "Approved" : "For Review"}
                       </span>
                     </td>
-                    <td className="p-3">
+                    <td className="px-4 py-3">
                       <button
                         onClick={() => onToggleComplete(r._id)}
                         disabled={togglingId === r._id}
-                        className={`cursor-pointer flex items-center gap-1 text-sm px-3 py-1 rounded-lg disabled:opacity-50 ${r.completed ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200" : "bg-green-100 text-green-700 hover:bg-green-200"}`}
+                        className={`cursor-pointer flex items-center gap-1 text-xs px-3 py-1.5 rounded-lg disabled:opacity-50 whitespace-nowrap transition ${
+                          r.completed
+                            ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                            : "bg-green-100 text-green-700 hover:bg-green-200"
+                        }`}
                       >
                         {togglingId === r._id ? (
                           <Spinner className="h-3 w-3" />
@@ -227,14 +255,12 @@ export default function AdminReportsTab({
                         )}
                       </button>
                     </td>
-                    <td className="p-3">
-                      {/* ✅ Single Excel — opens preview first */}
+                    <td className="px-4 py-3">
                       <button
                         onClick={() => openSinglePreview(r)}
-                        title="Preview & Download as Excel"
-                        className="cursor-pointer flex items-center gap-1 text-sm text-green-600 hover:text-green-800"
+                        className="cursor-pointer flex items-center gap-1 text-xs text-green-600 hover:text-green-800 font-medium transition"
                       >
-                        <FaDownload /> Excel
+                        <FaDownload className="h-3 w-3" /> Excel
                       </button>
                     </td>
                   </tr>
@@ -251,13 +277,13 @@ export default function AdminReportsTab({
         </>
       )}
 
-      {/* ✅ Preview Modal */}
+      {/* ── PREVIEW MODAL ── */}
       <ExcelPreviewModal
         show={previewModal.show}
         onClose={closePreview}
         onConfirmDownload={
           previewModal.mode === "bulk"
-            ? handleConfirmBulkDownload
+            ? onBulkDownload
             : handleConfirmSingleDownload
         }
         report={previewModal.mode === "single" ? previewModal.report : null}

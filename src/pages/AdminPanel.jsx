@@ -65,13 +65,9 @@ export default function AdminPanel() {
   const [bulkMonth, setBulkMonth] = useState(
     MONTHS[prevMonthIndex >= 0 ? prevMonthIndex : 11],
   );
-
-  // ✅ bulkYear — default sa current year
-  // kung prevMonthIndex < 0 (January), year is previous year
   const [bulkYear, setBulkYear] = useState(
     prevMonthIndex < 0 ? currentYear - 1 : currentYear,
   );
-
   const [trackerMonth, setTrackerMonth] = useState(
     MONTHS[prevMonthIndex >= 0 ? prevMonthIndex : 11],
   );
@@ -79,16 +75,11 @@ export default function AdminPanel() {
     prevMonthIndex < 0 ? currentYear - 1 : currentYear,
   );
 
-  // ✅ fetch by month AND year — hindi na mag-mi-mix ang 2025 at 2026
   const fetchReports = useCallback(async () => {
     try {
       setLoadingReports(true);
       const res = await API.get("/reports", {
-        params: {
-          month: bulkMonth,
-          year: bulkYear, // ✅ idagdag ang year filter
-          limit: 9999,
-        },
+        params: { month: bulkMonth, year: bulkYear, limit: 9999 },
       });
       setReports(res.data.data);
     } catch {
@@ -96,7 +87,7 @@ export default function AdminPanel() {
     } finally {
       setLoadingReports(false);
     }
-  }, [bulkMonth, bulkYear]); // ✅ re-fetch kapag nagbago ang month O year
+  }, [bulkMonth, bulkYear]);
 
   const fetchUsers = async () => {
     try {
@@ -113,11 +104,9 @@ export default function AdminPanel() {
   useEffect(() => {
     fetchUsers();
   }, []);
-
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
-
   useEffect(() => {
     setReportPage(1);
   }, [bulkMonth, bulkYear]);
@@ -137,14 +126,11 @@ export default function AdminPanel() {
   };
 
   const handleBulkDownload = async () => {
-    // ✅ approved reports lang ang ida-download
     const approvedReports = reports.filter((r) => r.completed === true);
-
     if (approvedReports.length === 0) {
       toast.error(`No approved reports found for ${bulkMonth} ${bulkYear}.`);
       return;
     }
-
     try {
       await exportBulkReports(approvedReports, `${bulkMonth} ${bulkYear}`);
       toast.success(
@@ -281,105 +267,125 @@ export default function AdminPanel() {
   );
   const years = [currentYear, currentYear - 1, currentYear - 2];
 
+  const TABS = [
+    { key: "reports", label: "Reports" },
+    { key: "tracker", label: "📋 Tracker" },
+    { key: "users", label: "Users" },
+  ];
+
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
-      {/* HEADER */}
-      <div className="flex items-center gap-3 mb-6">
+    <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
+      {/* ── HEADER ── */}
+      <div className="flex items-center gap-3 mb-5 sm:mb-6">
         <button
           type="button"
           onClick={() => navigate("/")}
-          className="cursor-pointer flex items-center gap-1 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-2 rounded-lg transition"
+          className="cursor-pointer shrink-0 flex items-center gap-1 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-2 rounded-lg transition"
         >
           ← Back
         </button>
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">Admin Panel</h1>
-          <p className="text-sm text-gray-500">Manage reports and users</p>
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-3xl font-bold truncate">
+            Admin Panel
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-500">
+            Manage reports and users
+          </p>
         </div>
       </div>
 
-      {/* SUMMARY CARDS */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-        <div className="bg-white rounded-xl shadow p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
+      {/* ── SUMMARY CARDS ── */}
+      {/* 2-col on mobile, 4-col on lg */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-5 sm:mb-6">
+        {/* Card 1 */}
+        <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
           <div className="bg-blue-100 text-blue-600 p-2 sm:p-3 rounded-lg shrink-0">
             <FaFileAlt className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-gray-500 truncate">
+            <p className="text-[10px] sm:text-xs text-gray-500 truncate leading-tight">
               {bulkMonth} {bulkYear} Reports
             </p>
-            <p className="text-xl sm:text-2xl font-bold text-gray-800">
+            <p className="text-xl sm:text-2xl font-bold text-gray-800 leading-tight">
               {totalReports}
             </p>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
+        {/* Card 2 */}
+        <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
           <div className="bg-purple-100 text-purple-600 p-2 sm:p-3 rounded-lg shrink-0">
             <FaCalendarAlt className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-gray-500 truncate">
-              {prevMonthLabel} Reports
+            <p className="text-[10px] sm:text-xs text-gray-500 truncate leading-tight">
+              {prevMonthLabel}
             </p>
-            <p className="text-xl sm:text-2xl font-bold text-gray-800">
+            <p className="text-xl sm:text-2xl font-bold text-gray-800 leading-tight">
               {prevMonthReports}
             </p>
-            <div className="flex flex-col sm:flex-row gap-0.5 sm:gap-2 mt-0.5">
-              <span className="text-xs text-green-600 font-medium whitespace-nowrap">
+            {/* stacked on mobile, inline on sm+ */}
+            <div className="flex flex-col sm:flex-row gap-0 sm:gap-2 mt-0.5">
+              <span className="text-[10px] sm:text-xs text-green-600 font-medium whitespace-nowrap">
                 ✓ {prevMonthApproved} approved
               </span>
-              <span className="text-xs text-red-500 font-medium whitespace-nowrap">
+              <span className="text-[10px] sm:text-xs text-red-500 font-medium whitespace-nowrap">
                 ● {prevMonthPending} pending
               </span>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
+        {/* Card 3 */}
+        <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
           <div className="bg-green-100 text-green-600 p-2 sm:p-3 rounded-lg shrink-0">
             <FaUsers className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-gray-500 truncate">Total Users</p>
-            <p className="text-xl sm:text-2xl font-bold text-gray-800">
+            <p className="text-[10px] sm:text-xs text-gray-500 truncate leading-tight">
+              Total Users
+            </p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-800 leading-tight">
               {totalUsers}
             </p>
           </div>
         </div>
 
-        <div className="bg-white rounded-xl shadow p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
+        {/* Card 4 */}
+        <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
           <div className="bg-yellow-100 text-yellow-600 p-2 sm:p-3 rounded-lg shrink-0">
             <FaUserShield className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-gray-500 truncate">Total Admins</p>
-            <p className="text-xl sm:text-2xl font-bold text-gray-800">
+            <p className="text-[10px] sm:text-xs text-gray-500 truncate leading-tight">
+              Total Admins
+            </p>
+            <p className="text-xl sm:text-2xl font-bold text-gray-800 leading-tight">
               {totalAdmins}
             </p>
           </div>
         </div>
       </div>
 
-      {/* TABS */}
-      <div className="flex gap-2 mb-6 border-b border-gray-200">
-        {["reports", "tracker", "users"].map((tab) => (
+      {/* ── TABS ── */}
+      {/* scrollable on very small screens */}
+      <div className="flex gap-0 mb-5 sm:mb-6 border-b border-gray-200 overflow-x-auto scrollbar-none">
+        {TABS.map(({ key, label }) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`cursor-pointer px-4 py-2 text-sm font-medium border-b-2 transition capitalize ${
-              activeTab === tab
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={`cursor-pointer shrink-0 px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap ${
+              activeTab === key
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            {tab === "tracker"
-              ? "📋 Submission Tracker"
-              : tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {label}
           </button>
         ))}
       </div>
 
+      {/* ── TAB CONTENT ── */}
       {activeTab === "reports" && (
         <AdminReportsTab
           reports={reports}
@@ -392,8 +398,8 @@ export default function AdminPanel() {
           onToggleComplete={toggleComplete}
           bulkMonth={bulkMonth}
           setBulkMonth={setBulkMonth}
-          bulkYear={bulkYear} // ✅ pass year
-          setBulkYear={setBulkYear} // ✅ pass year setter
+          bulkYear={bulkYear}
+          setBulkYear={setBulkYear}
           onBulkDownload={handleBulkDownload}
         />
       )}
