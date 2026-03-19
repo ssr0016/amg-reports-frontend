@@ -409,7 +409,7 @@ export default function ReportForm({ reportId }) {
         <textarea
           id="names"
           name="names"
-          placeholder="Names of new believers / baptized"
+          placeholder="e.g. Juan dela Cruz, Maria Santos"
           onChange={handleChange}
           value={form.names}
           className="textarea"
@@ -425,7 +425,7 @@ export default function ReportForm({ reportId }) {
         <textarea
           id="narrativeReport"
           name="narrativeReport"
-          placeholder="Narrative Report"
+          placeholder="Describe what happened this month in your ministry..."
           onChange={handleChange}
           value={form.narrativeReport}
           className="textarea"
@@ -441,7 +441,7 @@ export default function ReportForm({ reportId }) {
         <textarea
           id="challenges"
           name="challenges"
-          placeholder="Challenges"
+          placeholder="What challenges or difficulties did you encounter this month?"
           onChange={handleChange}
           value={form.challenges}
           className="textarea"
@@ -457,7 +457,7 @@ export default function ReportForm({ reportId }) {
         <textarea
           id="prayerRequest"
           name="prayerRequest"
-          placeholder="Prayer Requests"
+          placeholder="List your prayer requests here..."
           onChange={handleChange}
           value={form.prayerRequest}
           className="textarea"
