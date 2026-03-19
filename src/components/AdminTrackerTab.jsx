@@ -127,6 +127,7 @@ export default function AdminTrackerTab({
             <tr>
               <th className="p-3">WORKER</th>
               <th className="p-3">CHURCH</th>
+              <th className="p-3">YEAR</th>
               <th className="p-3">AREA OF ASSIGNMENT</th>
               <th className="p-3">SUBMITTED</th>
               <th className="p-3">STATUS</th>
@@ -145,6 +146,9 @@ export default function AdminTrackerTab({
                   </td>
                   <td className="p-3 text-sm text-gray-600">
                     {r?.churchName || "—"}
+                  </td>
+                  <td className="p-3 text-sm text-gray-600">
+                    {r?.year || "—"}
                   </td>
                   <td className="p-3 text-sm text-gray-600">
                     {r?.areaAssignment || "—"}

@@ -41,15 +41,23 @@ function Dashboard() {
   }, [fetchReports]);
 
   const filteredReports = reports.filter((r) => {
+    const monthDisplay = `${r.month || ""} ${r.year || ""}`.toLowerCase();
+
     return (
       (filters.month === "" ||
-        r.month.toLowerCase().includes(filters.month.toLowerCase())) &&
+        monthDisplay.includes(filters.month.toLowerCase())) &&
       (filters.worker === "" ||
-        r.worker.toLowerCase().includes(filters.worker.toLowerCase())) &&
+        (r.worker || "")
+          .toLowerCase()
+          .includes(filters.worker.toLowerCase())) &&
       (filters.area === "" ||
-        r.areaAssignment.toLowerCase().includes(filters.area.toLowerCase())) &&
+        (r.areaAssignment || "")
+          .toLowerCase()
+          .includes(filters.area.toLowerCase())) &&
       (filters.church === "" ||
-        r.churchName.toLowerCase().includes(filters.church.toLowerCase()))
+        (r.churchName || "")
+          .toLowerCase()
+          .includes(filters.church.toLowerCase()))
     );
   });
 

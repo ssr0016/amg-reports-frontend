@@ -38,6 +38,7 @@ export default function ReportForm({ reportId }) {
 
   const [form, setForm] = useState({
     month: "",
+    year: new Date().getFullYear(), // ✅ explicit year field
     worker: "",
     areaAssignment: "",
     churchName: "",
@@ -92,6 +93,18 @@ export default function ReportForm({ reportId }) {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  // ✅ dedicated handler for month — keeps year in sync
+  const handleMonthChange = (e) => {
+    const value = e.target.value;
+    const parsed = parseMonthFromInput(value);
+    const parsedYear = parseYearFromInput(value);
+    setForm({
+      ...form,
+      month: parsed ? parsed.charAt(0).toUpperCase() + parsed.slice(1) : value,
+      year: parsedYear,
+    });
+  };
+
   const handleWeekChange = (category, week, value) => {
     setForm({
       ...form,
@@ -110,24 +123,23 @@ export default function ReportForm({ reportId }) {
 
     const parsedMonth = parseMonthFromInput(form.month);
     if (!parsedMonth) {
-      toast.error("Please enter a valid month (ex. February 2026).");
+      toast.error("Please enter a valid month (e.g. February).");
       return;
     }
 
-    const parsedYear = parseYearFromInput(form.month);
     const now = new Date();
     const currentMonthIndex = now.getMonth();
     const currentYear = now.getFullYear();
     const inputMonthIndex = VALID_MONTHS.indexOf(parsedMonth);
 
-    const inputDate = new Date(parsedYear, inputMonthIndex, 1);
+    const inputDate = new Date(form.year, inputMonthIndex, 1); // ✅ use form.year
     const currentDate = new Date(currentYear, currentMonthIndex, 1);
 
     if (inputDate >= currentDate) {
       const monthName =
         parsedMonth.charAt(0).toUpperCase() + parsedMonth.slice(1);
       toast.error(
-        `You cannot report for ${monthName} ${parsedYear} yet. Please report for a previous month only.`,
+        `You cannot report for ${monthName} ${form.year} yet. Please report for a previous month only.`,
       );
       return;
     }
@@ -135,10 +147,10 @@ export default function ReportForm({ reportId }) {
     try {
       setLoading(true);
       if (isEditing) {
-        await API.put(`/reports/${reportId}`, form);
+        await API.put(`/reports/${reportId}`, form); // ✅ form already has year
         toast.success("Report updated successfully!");
       } else {
-        await API.post("/reports", form);
+        await API.post("/reports", form); // ✅ form already has year
         toast.success("Report created successfully!");
       }
       navigate("/");
@@ -188,8 +200,8 @@ export default function ReportForm({ reportId }) {
           <input
             id="month"
             name="month"
-            placeholder="ex. January 2026"
-            onChange={handleChange}
+            placeholder="e.g. February"
+            onChange={handleMonthChange} // ✅ dedicated handler
             value={form.month}
             className="input"
           />

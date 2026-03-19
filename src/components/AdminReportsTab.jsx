@@ -17,7 +17,6 @@ export default function AdminReportsTab({
   setBulkMonth,
   onBulkDownload,
 }) {
-  // ✅ async wrapper para sa exportSingleReport
   const handleDownload = async (r) => {
     await exportSingleReport(r);
   };
@@ -64,7 +63,9 @@ export default function AdminReportsTab({
                 <div className="flex justify-between items-start mb-2">
                   <div>
                     <p className="font-semibold text-gray-800">{r.worker}</p>
-                    <p className="text-sm text-gray-500">{r.month}</p>
+                    <p className="text-sm text-gray-500">
+                      {r.month} {r.year}
+                    </p>
                   </div>
                   <span
                     className={`px-2 py-1 rounded-full text-xs font-semibold ${r.completed ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
@@ -109,6 +110,7 @@ export default function AdminReportsTab({
                 <tr>
                   <th className="p-3">WORKER</th>
                   <th className="p-3">MONTH</th>
+                  <th className="p-3">YEAR</th>
                   <th className="p-3">AREA OF ASSIGNMENT</th>
                   <th className="p-3">CHURCH</th>
                   <th className="p-3">STATUS</th>
@@ -121,6 +123,7 @@ export default function AdminReportsTab({
                   <tr key={r._id} className="border-b hover:bg-gray-50">
                     <td className="p-3">{r.worker}</td>
                     <td className="p-3">{r.month}</td>
+                    <td className="p-3">{r.year}</td>
                     <td className="p-3">{r.areaAssignment}</td>
                     <td className="p-3">{r.churchName}</td>
                     <td className="p-3">
