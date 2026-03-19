@@ -17,6 +17,11 @@ export default function AdminReportsTab({
   setBulkMonth,
   onBulkDownload,
 }) {
+  // ✅ async wrapper para sa exportSingleReport
+  const handleDownload = async (r) => {
+    await exportSingleReport(r);
+  };
+
   return (
     <>
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-3">
@@ -67,7 +72,9 @@ export default function AdminReportsTab({
                     {r.completed ? "Approved" : "For Review"}
                   </span>
                 </div>
-                <p className="text-sm text-gray-600 mb-1">📍 {r.areaAssignment}</p>
+                <p className="text-sm text-gray-600 mb-1">
+                  📍 {r.areaAssignment}
+                </p>
                 <p className="text-sm text-gray-600 mb-3">⛪ {r.churchName}</p>
                 <div className="flex gap-2 justify-end">
                   <button
@@ -85,7 +92,7 @@ export default function AdminReportsTab({
                     {r.completed ? "Unapprove" : "Approve"}
                   </button>
                   <button
-                    onClick={() => exportSingleReport(r)}
+                    onClick={() => handleDownload(r)}
                     className="cursor-pointer flex items-center gap-1 text-sm px-3 py-1 rounded-lg bg-green-600 text-white hover:bg-green-700"
                   >
                     <FaDownload className="h-3 w-3" /> Excel
@@ -144,7 +151,7 @@ export default function AdminReportsTab({
                     </td>
                     <td className="p-3">
                       <button
-                        onClick={() => exportSingleReport(r)}
+                        onClick={() => handleDownload(r)}
                         title="Download as Excel"
                         className="cursor-pointer flex items-center gap-1 text-sm text-green-600 hover:text-green-800"
                       >

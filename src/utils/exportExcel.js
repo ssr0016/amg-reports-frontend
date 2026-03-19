@@ -1,92 +1,271 @@
 // /src/utils/exportExcel.js
-import * as XLSX from "xlsx";
+// Requires: npm install exceljs file-saver
+// Remove: npm uninstall xlsx
+
+import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 
-function reportToRows(report) {
-  const sections = [
-    { label: "Worship Service", key: "worshipService" },
-    { label: "Sunday School", key: "sundaySchool" },
-    { label: "Prayer Meeting", key: "prayerMeeting" },
-    { label: "Bible Studies", key: "bibleStudies" },
-    { label: "Men's Fellowship", key: "mensFellowship" },
-    { label: "Women's Fellowship", key: "womensFellowship" },
-    { label: "Youth Fellowship", key: "youthFellowship" },
-    { label: "Children Fellowship", key: "childrenFellowship" },
-    { label: "Tithes & Offering (₱)", key: "tithesOffering" },
-    { label: "Homes Visited", key: "homeVisited" },
-    { label: "Bible Study Group Led", key: "bibleStudyGroupLed" },
-    { label: "Sermon Preached", key: "sermonPreached" },
-    { label: "Person Newly Contacted", key: "personNewlyContacted" },
-    { label: "Person Followed Up", key: "personFollowedUp" },
-    { label: "Person Evangelized", key: "personEvangelized" },
-    { label: "Outreach", key: "outreach" },
-    { label: "Training", key: "training" },
-    { label: "Leadership", key: "leadership" },
-    { label: "Baptism", key: "baptism" },
-    { label: "Other", key: "other" },
-    { label: "Family Day", key: "familyDay" },
-  ];
+// ─── STYLES ──────────────────────────────────────────────────────────────────
 
-  const rows = [];
+const F = {
+  title: { name: "Arial", bold: true, size: 14 },
+  subtitle: { name: "Arial", bold: true, size: 10 },
+  headerWh: {
+    name: "Arial",
+    bold: true,
+    size: 10,
+    color: { argb: "FFFFFFFF" },
+  },
+  bold: { name: "Arial", bold: true, size: 10 },
+  normal: { name: "Arial", bold: false, size: 10 },
+  small: { name: "Arial", bold: false, size: 8 },
+};
 
-  // Header info
-  rows.push(["Month", report.month || ""]);
-  rows.push(["Worker", report.worker || ""]);
-  rows.push(["Area Assignment", report.areaAssignment || ""]);
-  rows.push(["Church Name", report.churchName || ""]);
-  rows.push(["Status", report.completed ? "Approved" : "For Review"]);
-  rows.push([]); // blank row
+const FILL_BLACK = {
+  type: "pattern",
+  pattern: "solid",
+  fgColor: { argb: "FF000000" },
+};
+const BORDER_THIN = {
+  top: { style: "thin" },
+  left: { style: "thin" },
+  bottom: { style: "thin" },
+  right: { style: "thin" },
+};
+const BORDER_BTM = { bottom: { style: "thin" } };
+const AL_CTR = { horizontal: "center", vertical: "middle" };
+const AL_LEFT = { horizontal: "left", vertical: "middle" };
+const AL_TOP_LEFT = { horizontal: "left", vertical: "top", wrapText: true };
 
-  // ✅ Weekly section header — walang "CATEGORY" label
-  rows.push(["", "Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "TOTAL"]);
-
-  // Weekly data rows
-  sections.forEach(({ label, key }) => {
-    const w = report[key] || {};
-    const total = [w.week1, w.week2, w.week3, w.week4, w.week5]
-      .filter((v) => v !== null && v !== undefined && v !== "")
-      .reduce((a, b) => a + Number(b), 0);
-    rows.push([
-      label,
-      w.week1 ?? "",
-      w.week2 ?? "",
-      w.week3 ?? "",
-      w.week4 ?? "",
-      w.week5 ?? "",
-      total,
-    ]);
-  });
-
-  rows.push([]); // blank row
-
-  // Text fields
-  rows.push(["Names of New Believers / Baptized", report.names || ""]);
-  rows.push(["Narrative Report", report.narrativeReport || ""]);
-  rows.push(["Challenges", report.challenges || ""]);
-  rows.push(["Prayer Requests", report.prayerRequest || ""]);
-
-  return rows;
+function borderRow(ws, rowNum, c1, c2) {
+  for (let c = c1; c <= c2; c++)
+    ws.getRow(rowNum).getCell(c).border = BORDER_THIN;
 }
 
-// ✅ EXPORT SINGLE REPORT
-export function exportSingleReport(report) {
-  const rows = reportToRows(report);
+// ─── ACTIVITY ROW HELPER ─────────────────────────────────────────────────────
 
-  // ✅ aoa = array of arrays — walang auto-generated headers
-  const ws = XLSX.utils.aoa_to_sheet(rows);
+function actRow(ws, rowNum, label, weekData, font, indent = false) {
+  const w = weekData || {};
+  const row = ws.getRow(rowNum);
+  row.height = 16;
 
-  ws["!cols"] = [
-    { wch: 35 },
-    { wch: 10 },
-    { wch: 10 },
-    { wch: 10 },
-    { wch: 10 },
-    { wch: 10 },
-    { wch: 10 },
+  const lc = row.getCell(1);
+  lc.value = indent ? `   ${label}` : label;
+  lc.font = font;
+  lc.alignment = AL_LEFT;
+  lc.border = BORDER_THIN;
+
+  [w.week1, w.week2, w.week3, w.week4, w.week5].forEach((val, i) => {
+    const cell = row.getCell(i + 2);
+    cell.value = val ?? "";
+    cell.font = F.normal;
+    cell.alignment = AL_CTR;
+    cell.border = BORDER_THIN;
+  });
+
+  const avg = row.getCell(7);
+  avg.value = { formula: `IFERROR(AVERAGE(B${rowNum}:F${rowNum}),"")` };
+  avg.font = F.normal;
+  avg.alignment = AL_CTR;
+  avg.border = BORDER_THIN;
+}
+
+// ─── BUILD ONE WORKSHEET ─────────────────────────────────────────────────────
+
+function buildSheet(ws, report) {
+  ws.columns = [
+    { width: 28 },
+    { width: 12 },
+    { width: 12 },
+    { width: 12 },
+    { width: 12 },
+    { width: 12 },
+    { width: 12 },
   ];
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Report");
+  // Row 1 — Title
+  ws.mergeCells("A1:G1");
+  ws.getRow(1).height = 22;
+  const r1c1 = ws.getRow(1).getCell(1);
+  r1c1.value = "ANG MANANAMPALATAYANG GUMAWA";
+  r1c1.font = F.title;
+  r1c1.alignment = AL_CTR;
+
+  // Row 2 — Subtitle
+  ws.mergeCells("A2:G2");
+  ws.getRow(2).height = 16;
+  const r2c1 = ws.getRow(2).getCell(1);
+  r2c1.value = "NATIONAL WORKER'S MONTHLY MINISTRY REPORT";
+  r2c1.font = F.subtitle;
+  r2c1.alignment = AL_CTR;
+
+  // Row 3 — blank spacer
+  ws.getRow(3).height = 6;
+
+  // Rows 4–7 — Info fields
+  [
+    [4, "Month of:", report.month || ""],
+    [5, "Worker", report.worker || ""],
+    [6, "Area of Assignment", report.areaAssignment || ""],
+    [7, "Name of Church/Outreach:", report.churchName || ""],
+  ].forEach(([rowNum, label, value]) => {
+    ws.mergeCells(`B${rowNum}:G${rowNum}`);
+    ws.getRow(rowNum).height = 16;
+    const lc = ws.getRow(rowNum).getCell(1);
+    lc.value = label;
+    lc.font = F.normal;
+    lc.alignment = AL_LEFT;
+    const vc = ws.getRow(rowNum).getCell(2);
+    vc.value = value;
+    vc.font = F.normal;
+    vc.border = BORDER_BTM;
+  });
+
+  // Row 8 — "Weekly Attendance" black header
+  ws.mergeCells("A8:G8");
+  ws.getRow(8).height = 16;
+  const r8c1 = ws.getRow(8).getCell(1);
+  r8c1.value = "Weekly Attendance";
+  r8c1.font = F.headerWh;
+  r8c1.fill = FILL_BLACK;
+  r8c1.alignment = AL_LEFT;
+
+  // Row 9 — Column headers
+  ws.getRow(9).height = 16;
+  [
+    "Activities",
+    "Week 1",
+    "Week 2",
+    "Week 3",
+    "Week 4",
+    "Week 5",
+    "Average",
+  ].forEach((h, i) => {
+    const cell = ws.getRow(9).getCell(i + 1);
+    cell.value = h;
+    cell.font = F.bold;
+    cell.alignment = i === 0 ? AL_LEFT : AL_CTR;
+    cell.border = BORDER_THIN;
+  });
+
+  // Rows 10–18 — Attendance
+  [
+    ["Worship Service", report.worshipService],
+    ["Sunday School", report.sundaySchool],
+    ["Prayer Meeting", report.prayerMeeting],
+    ["Bible Studies", report.bibleStudies],
+    ["Mens Fellowships", report.mensFellowship],
+    ["Womens Fellowships", report.womensFellowship],
+    ["Youth Fellowships", report.youthFellowship],
+    ["Children Fellowships", report.childrenFellowship],
+    ["Outreach", report.outreach],
+  ].forEach(([label, data], i) => actRow(ws, 10 + i, label, data, F.normal));
+
+  // Row 19 — blank
+  borderRow(ws, 19, 1, 7);
+
+  // Rows 20–22 — Training / Seminars
+  actRow(ws, 20, "Training/ Seminars", report.training || {}, F.bold);
+  actRow(ws, 21, "Leadership Conference", {}, F.small, true);
+  actRow(ws, 22, "Leadership Training", report.leadership || {}, F.small, true);
+
+  // Row 23 — blank
+  borderRow(ws, 23, 1, 7);
+
+  // Rows 24–25 — Other / Family Day
+  actRow(ws, 24, "Other", report.other || {}, F.bold);
+  actRow(ws, 25, "Family Day", report.familyDay || {}, F.small, true);
+
+  // Row 26 — blank
+  borderRow(ws, 26, 1, 7);
+
+  // Row 27 — Tithes & Offering
+  actRow(ws, 27, "Tithes & Offering", report.tithesOffering || {}, F.normal);
+
+  // Row 28 — blank
+  borderRow(ws, 28, 1, 7);
+
+  // Row 29 — black divider
+  ws.mergeCells("A29:G29");
+  ws.getRow(29).height = 12;
+  for (let c = 1; c <= 7; c++) ws.getRow(29).getCell(c).fill = FILL_BLACK;
+
+  // Row 30 — 2nd column headers
+  ws.getRow(30).height = 16;
+  ["", "Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Average"].forEach(
+    (h, i) => {
+      const cell = ws.getRow(30).getCell(i + 1);
+      cell.value = h;
+      cell.font = F.bold;
+      cell.alignment = i === 0 ? AL_LEFT : AL_CTR;
+      cell.border = BORDER_THIN;
+    },
+  );
+
+  // Rows 31–36 — Ministry activities
+  [
+    ["Home Visited", report.homeVisited],
+    ["Bible Study Group Led", report.bibleStudyGroupLed],
+    ["Sermon/Message Preached", report.sermonPreached],
+    ["Person Newly Contacted", report.personNewlyContacted],
+    ["Person Followed-up", report.personFollowedUp],
+    ["Person Led To Christ", report.personEvangelized],
+  ].forEach(([label, data], i) => actRow(ws, 31 + i, label, data, F.normal));
+
+  // Row 37 — Names
+  ws.mergeCells("B37:G37");
+  ws.getRow(37).height = 16;
+  ws.getRow(37).getCell(1).value = "Names:";
+  ws.getRow(37).getCell(1).font = F.bold;
+  ws.getRow(37).getCell(1).alignment = AL_LEFT;
+  ws.getRow(37).getCell(2).value = report.names || "";
+  ws.getRow(37).getCell(2).font = F.normal;
+  borderRow(ws, 37, 1, 7);
+
+  [38, 39].forEach((r) => {
+    ws.mergeCells(`B${r}:G${r}`);
+    borderRow(ws, r, 1, 7);
+  });
+
+  // Row 40 — Narrative Report
+  ws.mergeCells("B40:G40");
+  ws.getRow(40).height = 50;
+  ws.getRow(40).getCell(1).value = "Narrative Report:";
+  ws.getRow(40).getCell(1).font = F.bold;
+  ws.getRow(40).getCell(1).alignment = AL_TOP_LEFT;
+  ws.getRow(40).getCell(2).value = report.narrativeReport || "";
+  ws.getRow(40).getCell(2).alignment = AL_TOP_LEFT;
+  borderRow(ws, 40, 1, 7);
+
+  // Row 41 — blank
+  ws.mergeCells("B41:G41");
+  borderRow(ws, 41, 1, 7);
+
+  // Row 42 — Challenges
+  ws.mergeCells("B42:G42");
+  ws.getRow(42).height = 35;
+  ws.getRow(42).getCell(1).value = "Challenges/Problem\nEncountered";
+  ws.getRow(42).getCell(1).font = F.normal;
+  ws.getRow(42).getCell(1).alignment = AL_TOP_LEFT;
+  ws.getRow(42).getCell(2).value = report.challenges || "";
+  ws.getRow(42).getCell(2).alignment = AL_TOP_LEFT;
+  borderRow(ws, 42, 1, 7);
+
+  // Row 43 — Prayer Request
+  ws.mergeCells("B43:G43");
+  ws.getRow(43).height = 20;
+  ws.getRow(43).getCell(1).value = "Prayer Request";
+  ws.getRow(43).getCell(1).font = F.normal;
+  ws.getRow(43).getCell(1).alignment = AL_LEFT;
+  ws.getRow(43).getCell(2).value = report.prayerRequest || "";
+  borderRow(ws, 43, 1, 7);
+}
+
+// ─── EXPORT SINGLE ────────────────────────────────────────────────────────────
+
+export async function exportSingleReport(report) {
+  const wb = new ExcelJS.Workbook();
+  buildSheet(wb.addWorksheet("Report"), report);
 
   const fileName =
     `${report.worker || "Report"}_${report.month || "Unknown"}.xlsx`.replace(
@@ -94,66 +273,60 @@ export function exportSingleReport(report) {
       "_",
     );
 
-  const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
-  saveAs(blob, fileName);
+  const buffer = await wb.xlsx.writeBuffer();
+  saveAs(new Blob([buffer], { type: "application/octet-stream" }), fileName);
 }
 
-// ✅ EXPORT BULK — lahat ng reports ng specific month
-export function exportBulkReports(reports, month) {
-  const wb = XLSX.utils.book_new();
+// ─── EXPORT BULK ──────────────────────────────────────────────────────────────
 
-  // ✅ Summary sheet
-  const summaryRows = [
-    ["WORKER", "CHURCH NAME", "AREA ASSIGNMENT", "MONTH", "STATUS"],
-    ...reports.map((r) => [
-      r.worker || "",
-      r.churchName || "",
-      r.areaAssignment || "",
-      r.month || "",
-      r.completed ? "Approved" : "For Review",
-    ]),
+export async function exportBulkReports(reports, month) {
+  const wb = new ExcelJS.Workbook();
+
+  // Summary sheet
+  const sw = wb.addWorksheet("Summary");
+  sw.columns = [
+    { header: "WORKER", key: "worker", width: 25 },
+    { header: "CHURCH NAME", key: "churchName", width: 35 },
+    { header: "AREA ASSIGNMENT", key: "areaAssignment", width: 25 },
+    { header: "MONTH", key: "month", width: 20 },
+    { header: "STATUS", key: "status", width: 15 },
   ];
+  sw.getRow(1).eachCell((cell) => {
+    cell.font = F.headerWh;
+    cell.fill = FILL_BLACK;
+    cell.alignment = AL_CTR;
+    cell.border = BORDER_THIN;
+  });
+  reports.forEach((r) => {
+    const row = sw.addRow({
+      worker: r.worker || "",
+      churchName: r.churchName || "",
+      areaAssignment: r.areaAssignment || "",
+      month: r.month || "",
+      status: r.completed ? "Approved" : "For Review",
+    });
+    row.eachCell((cell) => {
+      cell.font = F.normal;
+      cell.alignment = AL_LEFT;
+      cell.border = BORDER_THIN;
+    });
+  });
 
-  const summaryWs = XLSX.utils.aoa_to_sheet(summaryRows);
-  summaryWs["!cols"] = [
-    { wch: 25 },
-    { wch: 35 },
-    { wch: 25 },
-    { wch: 20 },
-    { wch: 15 },
-  ];
-  XLSX.utils.book_append_sheet(wb, summaryWs, "Summary");
-
-  // Individual sheet per worker — deduplicate sheet names (XLSX limit: 31 chars)
+  // Individual sheets per worker
   const usedNames = new Set();
-  reports.forEach((report, i) => {
-    const rows = reportToRows(report);
-    const ws = XLSX.utils.aoa_to_sheet(rows);
-    ws["!cols"] = [
-      { wch: 35 },
-      { wch: 10 },
-      { wch: 10 },
-      { wch: 10 },
-      { wch: 10 },
-      { wch: 10 },
-      { wch: 10 },
-    ];
-
-    let baseName = (report.worker || "Unknown").substring(0, 31);
-    let sheetName = baseName;
-    let counter = 1;
-    while (usedNames.has(sheetName)) {
-      const suffix = `_${counter}`;
-      sheetName = baseName.substring(0, 31 - suffix.length) + suffix;
-      counter++;
+  reports.forEach((report) => {
+    let base = (report.worker || "Unknown").substring(0, 31);
+    let name = base;
+    let n = 1;
+    while (usedNames.has(name)) {
+      const sfx = `_${n++}`;
+      name = base.substring(0, 31 - sfx.length) + sfx;
     }
-    usedNames.add(sheetName);
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    usedNames.add(name);
+    buildSheet(wb.addWorksheet(name), report);
   });
 
   const fileName = `Reports_${month || "All"}.xlsx`.replace(/\s+/g, "_");
-  const excelBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-  const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
-  saveAs(blob, fileName);
+  const buffer = await wb.xlsx.writeBuffer();
+  saveAs(new Blob([buffer], { type: "application/octet-stream" }), fileName);
 }

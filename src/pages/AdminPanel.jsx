@@ -103,9 +103,7 @@ export default function AdminPanel() {
       setTogglingId(id);
       const res = await API.patch(`/reports/${id}/complete`);
       const updated = res.data.data;
-      setReports((prev) =>
-        prev.map((r) => (r._id === id ? updated : r)),
-      );
+      setReports((prev) => prev.map((r) => (r._id === id ? updated : r)));
       toast.success("Status updated!");
     } catch {
       toast.error("Failed to update status.");
@@ -114,7 +112,7 @@ export default function AdminPanel() {
     }
   };
 
-  const handleBulkDownload = () => {
+  const handleBulkDownload = async () => {
     const filtered = bulkMonth
       ? reports.filter((r) =>
           r.month?.toLowerCase().includes(bulkMonth.toLowerCase()),
@@ -126,8 +124,12 @@ export default function AdminPanel() {
       return;
     }
 
-    exportBulkReports(filtered, bulkMonth || "All");
-    toast.success(`Downloading ${filtered.length} reports...`);
+    try {
+      await exportBulkReports(filtered, bulkMonth || "All");
+      toast.success(`Downloading ${filtered.length} reports...`);
+    } catch {
+      toast.error("Failed to export reports.");
+    }
   };
 
   const handleUserFormChange = (e) => {
@@ -136,7 +138,13 @@ export default function AdminPanel() {
 
   const openCreateUser = () => {
     setEditingUserId(null);
-    setUserForm({ name: "", username: "", email: "", password: "", role: "user" });
+    setUserForm({
+      name: "",
+      username: "",
+      email: "",
+      password: "",
+      role: "user",
+    });
     setShowUserPassword(false);
     setShowUserForm(true);
   };
@@ -157,7 +165,13 @@ export default function AdminPanel() {
   const closeUserForm = () => {
     setShowUserForm(false);
     setEditingUserId(null);
-    setUserForm({ name: "", username: "", email: "", password: "", role: "user" });
+    setUserForm({
+      name: "",
+      username: "",
+      email: "",
+      password: "",
+      role: "user",
+    });
     setShowUserPassword(false);
   };
 
@@ -260,7 +274,7 @@ export default function AdminPanel() {
         >
           ← Back
         </button>
-<div>
+        <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Admin Panel</h1>
           <p className="text-sm text-gray-500">Manage reports and users</p>
         </div>
