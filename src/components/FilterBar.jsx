@@ -1,18 +1,45 @@
 // FilterBar.jsx
-import { FaTimes } from "react-icons/fa";
+import { FaTimes, FaChevronDown } from "react-icons/fa";
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const currentYear = new Date().getFullYear();
+const YEARS = [currentYear, currentYear - 1, currentYear - 2];
 
 export default function FilterBar({ filters, setFilters }) {
-  const hasFilters = Object.values(filters).some((v) => v !== "");
+  // ✅ hasFilters — hindi kasama ang year kasi laging may year selected
+  const hasFilters =
+    filters.month !== "" ||
+    filters.worker !== "" ||
+    filters.area !== "" ||
+    filters.church !== "";
 
   const handleChange = (e) => {
-    setFilters({
-      ...filters,
-      [e.target.name]: e.target.value,
-    });
+    setFilters({ ...filters, [e.target.name]: e.target.value });
   };
 
+  // ✅ clear — month lang ang na-clear, year stays sa current year
   const clearFilters = () => {
-    setFilters({ month: "", worker: "", area: "", church: "" });
+    setFilters({
+      month: "",
+      year: currentYear,
+      worker: "",
+      area: "",
+      church: "",
+    });
   };
 
   return (
@@ -20,7 +47,6 @@ export default function FilterBar({ filters, setFilters }) {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-700">Search Filters</h2>
 
-        {/* ✅ improved clear filters button */}
         <div
           className={`transition-all duration-200 ${
             hasFilters
@@ -38,19 +64,52 @@ export default function FilterBar({ filters, setFilters }) {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {/* ✅ Month dropdown */}
         <div className="flex flex-col gap-1">
           <label htmlFor="month" className="text-sm font-medium text-gray-600">
             Month
           </label>
-          <input
-            id="month"
-            name="month"
-            placeholder="e.g. January"
-            value={filters.month}
-            onChange={handleChange}
-            className="input"
-          />
+          <div className="relative">
+            <select
+              id="month"
+              name="month"
+              value={filters.month}
+              onChange={handleChange}
+              className="cursor-pointer appearance-none w-full bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-sm rounded-lg pl-3 pr-8 py-2 outline-none transition shadow-sm text-gray-800"
+            >
+              <option value="">All Months</option>
+              {MONTHS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+            <FaChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 h-3 w-3" />
+          </div>
+        </div>
+
+        {/* ✅ Year dropdown — laging may selected, default current year */}
+        <div className="flex flex-col gap-1">
+          <label htmlFor="year" className="text-sm font-medium text-gray-600">
+            Year
+          </label>
+          <div className="relative">
+            <select
+              id="year"
+              name="year"
+              value={filters.year}
+              onChange={handleChange}
+              className="cursor-pointer appearance-none w-full bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-sm rounded-lg pl-3 pr-8 py-2 outline-none transition shadow-sm text-gray-800"
+            >
+              {YEARS.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+            <FaChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 h-3 w-3" />
+          </div>
         </div>
 
         <div className="flex flex-col gap-1">

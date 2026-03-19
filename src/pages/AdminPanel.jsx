@@ -1,5 +1,5 @@
 // /src/pages/AdminPanel.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "../services/api";
 import toast from "react-hot-toast";
@@ -59,31 +59,44 @@ export default function AdminPanel() {
 
   const [activeTab, setActiveTab] = useState("reports");
 
-  // ✅ default na ang previous month, hindi na blank
   const currentYear = new Date().getFullYear();
   const prevMonthIndex = new Date().getMonth() - 1;
+
   const [bulkMonth, setBulkMonth] = useState(
     MONTHS[prevMonthIndex >= 0 ? prevMonthIndex : 11],
   );
 
+  // ✅ bulkYear — default sa current year
+  // kung prevMonthIndex < 0 (January), year is previous year
+  const [bulkYear, setBulkYear] = useState(
+    prevMonthIndex < 0 ? currentYear - 1 : currentYear,
+  );
+
   const [trackerMonth, setTrackerMonth] = useState(
-    MONTHS[prevMonthIndex] ?? MONTHS[11],
+    MONTHS[prevMonthIndex >= 0 ? prevMonthIndex : 11],
   );
   const [trackerYear, setTrackerYear] = useState(
     prevMonthIndex < 0 ? currentYear - 1 : currentYear,
   );
 
-  const fetchReports = async () => {
+  // ✅ fetch by month AND year — hindi na mag-mi-mix ang 2025 at 2026
+  const fetchReports = useCallback(async () => {
     try {
       setLoadingReports(true);
-      const res = await API.get("/reports");
+      const res = await API.get("/reports", {
+        params: {
+          month: bulkMonth,
+          year: bulkYear, // ✅ idagdag ang year filter
+          limit: 9999,
+        },
+      });
       setReports(res.data.data);
     } catch {
       toast.error("Failed to fetch reports.");
     } finally {
       setLoadingReports(false);
     }
-  };
+  }, [bulkMonth, bulkYear]); // ✅ re-fetch kapag nagbago ang month O year
 
   const fetchUsers = async () => {
     try {
@@ -98,9 +111,16 @@ export default function AdminPanel() {
   };
 
   useEffect(() => {
-    fetchReports();
     fetchUsers();
   }, []);
+
+  useEffect(() => {
+    fetchReports();
+  }, [fetchReports]);
+
+  useEffect(() => {
+    setReportPage(1);
+  }, [bulkMonth, bulkYear]);
 
   const toggleComplete = async (id) => {
     try {
@@ -117,18 +137,13 @@ export default function AdminPanel() {
   };
 
   const handleBulkDownload = async () => {
-    const filtered = reports.filter((r) =>
-      r.month?.toLowerCase().includes(bulkMonth.toLowerCase()),
-    );
-
-    if (filtered.length === 0) {
-      toast.error("No reports found for selected month.");
+    if (reports.length === 0) {
+      toast.error(`No reports found for ${bulkMonth} ${bulkYear}.`);
       return;
     }
-
     try {
-      await exportBulkReports(filtered, bulkMonth);
-      toast.success(`Downloading ${filtered.length} reports...`);
+      await exportBulkReports(reports, `${bulkMonth} ${bulkYear}`);
+      toast.success(`Downloading ${reports.length} reports...`);
     } catch {
       toast.error("Failed to export reports.");
     }
@@ -206,7 +221,7 @@ export default function AdminPanel() {
       toast.success("User deleted successfully!");
       setConfirmDeleteUserId(null);
       fetchUsers();
-      fetchReports(); // ✅ i-refresh ang reports after mag-delete ng user
+      fetchReports();
     } catch {
       toast.error("Failed to delete user.");
     } finally {
@@ -233,20 +248,14 @@ export default function AdminPanel() {
     const report = reports.find(
       (r) =>
         r.createdBy === w._id &&
-        r.month?.toLowerCase().includes(trackerMonth.toLowerCase()) &&
-        r.month?.toLowerCase().includes(String(trackerYear)),
+        r.month?.toLowerCase() === trackerMonth.toLowerCase() &&
+        String(r.year) === String(trackerYear),
     );
-    const reportFallback = reports.find(
-      (r) =>
-        r.createdBy === w._id &&
-        r.month?.toLowerCase().includes(trackerMonth.toLowerCase()),
-    );
-    const matched = report || reportFallback;
     return {
       worker: w,
-      report: matched || null,
-      submitted: !!matched,
-      approved: matched?.completed === true,
+      report: report || null,
+      submitted: !!report,
+      approved: report?.completed === true,
     };
   });
 
@@ -290,7 +299,9 @@ export default function AdminPanel() {
             <FaFileAlt className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-gray-500 truncate">Total Reports</p>
+            <p className="text-xs text-gray-500 truncate">
+              {bulkMonth} {bulkYear} Reports
+            </p>
             <p className="text-xl sm:text-2xl font-bold text-gray-800">
               {totalReports}
             </p>
@@ -375,6 +386,8 @@ export default function AdminPanel() {
           onToggleComplete={toggleComplete}
           bulkMonth={bulkMonth}
           setBulkMonth={setBulkMonth}
+          bulkYear={bulkYear} // ✅ pass year
+          setBulkYear={setBulkYear} // ✅ pass year setter
           onBulkDownload={handleBulkDownload}
         />
       )}

@@ -5,6 +5,9 @@ import { exportSingleReport } from "../utils/exportExcel";
 import { MONTHS } from "../constants";
 import toast from "react-hot-toast";
 
+const currentYear = new Date().getFullYear();
+const YEARS = [currentYear, currentYear - 1, currentYear - 2];
+
 export default function AdminReportsTab({
   reports,
   paginatedReports,
@@ -16,6 +19,8 @@ export default function AdminReportsTab({
   onToggleComplete,
   bulkMonth,
   setBulkMonth,
+  bulkYear,
+  setBulkYear,
   onBulkDownload,
 }) {
   const handleDownload = async (r) => {
@@ -28,7 +33,9 @@ export default function AdminReportsTab({
         <div className="flex flex-col gap-2">
           <p className="text-sm font-medium text-gray-800">
             Download all{" "}
-            <span className="text-blue-600 font-semibold">{bulkMonth}</span>{" "}
+            <span className="text-blue-600 font-semibold">
+              {bulkMonth} {bulkYear}
+            </span>{" "}
             reports?
           </p>
           <div className="flex gap-2 justify-end">
@@ -59,7 +66,7 @@ export default function AdminReportsTab({
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-3">
         <p className="text-sm text-gray-500">{reports.length} total reports</p>
         <div className="flex gap-2 items-end">
-          {/* ✅ improved select month */}
+          {/* ✅ Month dropdown */}
           <div className="flex flex-col gap-1">
             <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Select Month
@@ -68,7 +75,7 @@ export default function AdminReportsTab({
               <select
                 value={bulkMonth}
                 onChange={(e) => setBulkMonth(e.target.value)}
-                className="cursor-pointer appearance-none bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 text-sm font-medium rounded-lg pl-3 pr-8 py-2 w-44 transition outline-none shadow-sm"
+                className="cursor-pointer appearance-none bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 text-sm font-medium rounded-lg pl-3 pr-8 py-2 w-40 transition outline-none shadow-sm"
               >
                 {MONTHS.map((m) => (
                   <option key={m} value={m}>
@@ -76,14 +83,34 @@ export default function AdminReportsTab({
                   </option>
                 ))}
               </select>
-              {/* custom chevron icon */}
+              <FaChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 h-3 w-3" />
+            </div>
+          </div>
+
+          {/* ✅ Year dropdown */}
+          <div className="flex flex-col gap-1">
+            <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Select Year
+            </label>
+            <div className="relative">
+              <select
+                value={bulkYear}
+                onChange={(e) => setBulkYear(parseInt(e.target.value))}
+                className="cursor-pointer appearance-none bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 text-sm font-medium rounded-lg pl-3 pr-8 py-2 w-28 transition outline-none shadow-sm"
+              >
+                {YEARS.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
               <FaChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 h-3 w-3" />
             </div>
           </div>
 
           <button
             onClick={handleBulkDownloadClick}
-            className="cursor-pointer flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium whitespace-nowrap shadow-sm transition"
+            className="cursor-pointer flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium whitespace-nowrap shadow-sm transition self-end"
           >
             <FaDownload /> Download Excel
           </button>
@@ -93,6 +120,14 @@ export default function AdminReportsTab({
       {loading ? (
         <div className="flex justify-center items-center h-40">
           <Spinner className="h-10 w-10 text-blue-600" />
+        </div>
+      ) : reports.length === 0 ? (
+        // ✅ empty state — kapag walang reports sa selected month + year
+        <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+          <p className="text-lg font-medium">No reports found</p>
+          <p className="text-sm">
+            No reports submitted for {bulkMonth} {bulkYear} yet.
+          </p>
         </div>
       ) : (
         <>

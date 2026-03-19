@@ -1,5 +1,5 @@
 // Dashboard.jsx
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import API from "../services/api";
 import ReportList from "../components/ReportList";
 import FilterBar from "../components/FilterBar";
@@ -10,6 +10,12 @@ import { ITEMS_PER_PAGE } from "../constants";
 import { useDebounce } from "../hooks/useDebounce";
 import toast from "react-hot-toast";
 
+function getPrevMonthName() {
+  const now = new Date();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return prev.toLocaleString("en-US", { month: "long" });
+}
+
 function Dashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -17,74 +23,66 @@ function Dashboard() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalReports, setTotalReports] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const currentYear = new Date().getFullYear();
+  const prevMonthIndex = new Date().getMonth() - 1;
 
   const [filters, setFilters] = useState({
-    month: "",
+    month: getPrevMonthName(), // ✅ default previous month
+    year:
+      prevMonthIndex < 0 // ✅ default current year
+        ? currentYear - 1 //    kung January, previous year
+        : currentYear,
     worker: "",
     area: "",
     church: "",
   });
 
-  // ✅ debounce filters — wait 300ms after user stops typing before filtering
   const debouncedFilters = useDebounce(filters, 300);
 
   const fetchReports = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await API.get("/reports");
+      const res = await API.get("/reports", {
+        params: {
+          month: debouncedFilters.month || undefined,
+          year: debouncedFilters.year, // ✅ laging may year — hindi undefined
+          worker: debouncedFilters.worker || undefined,
+          area: debouncedFilters.area || undefined,
+          church: debouncedFilters.church || undefined,
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+        },
+      });
       setReports(res.data.data);
+      setTotalReports(res.data.total);
+      setTotalPages(res.data.pages);
     } catch (error) {
       console.error("Error fetching reports:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [debouncedFilters, currentPage]);
 
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
 
-  // ✅ useMemo — only recomputes when debouncedFilters or reports change
-  const filteredReports = useMemo(() => {
-    return reports.filter((r) => {
-      const monthDisplay = `${r.month || ""} ${r.year || ""}`.toLowerCase();
-      const worker = (r.worker || "").toLowerCase();
-      const area = (r.areaAssignment || "").toLowerCase();
-      const church = (r.churchName || "").toLowerCase();
-
-      return (
-        (debouncedFilters.month === "" ||
-          monthDisplay.includes(debouncedFilters.month.toLowerCase())) &&
-        (debouncedFilters.worker === "" ||
-          worker.includes(debouncedFilters.worker.toLowerCase())) &&
-        (debouncedFilters.area === "" ||
-          area.includes(debouncedFilters.area.toLowerCase())) &&
-        (debouncedFilters.church === "" ||
-          church.includes(debouncedFilters.church.toLowerCase()))
-      );
-    });
-  }, [reports, debouncedFilters]);
-
-  // ✅ reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedFilters]);
-
-  const totalPages = Math.ceil(filteredReports.length / ITEMS_PER_PAGE);
-
-  // ✅ useMemo for paginated slice too
-  const paginatedReports = useMemo(() => {
-    return filteredReports.slice(
-      (currentPage - 1) * ITEMS_PER_PAGE,
-      currentPage * ITEMS_PER_PAGE,
-    );
-  }, [filteredReports, currentPage]);
 
   const handleLogout = () => {
     logout();
     toast.success("Logged out successfully.");
     navigate("/login");
   };
+
+  const showingFrom =
+    totalReports === 0 ? 0 : (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const showingTo = Math.min(currentPage * ITEMS_PER_PAGE, totalReports);
 
   return (
     <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
@@ -118,14 +116,12 @@ function Dashboard() {
               Admin Panel
             </button>
           )}
-
           <button
             onClick={() => navigate("/create-report")}
             className="cursor-pointer flex-1 sm:flex-none bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm"
           >
             + Create Report
           </button>
-
           <button
             onClick={handleLogout}
             className="cursor-pointer flex-1 sm:flex-none bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm"
@@ -144,11 +140,12 @@ function Dashboard() {
       ) : (
         <>
           <p className="text-sm text-gray-500 mb-3">
-            Showing {paginatedReports.length} of {filteredReports.length}{" "}
-            reports
+            {totalReports === 0
+              ? `No reports found${filters.month ? ` for ${filters.month}` : ""} ${filters.year}`
+              : `Showing ${showingFrom} – ${showingTo} of ${totalReports} reports${filters.month ? ` for ${filters.month}` : " for All Months"} ${filters.year}`}
           </p>
 
-          <ReportList reports={paginatedReports} onDelete={fetchReports} />
+          <ReportList reports={reports} onDelete={fetchReports} />
 
           <Pagination
             currentPage={currentPage}
