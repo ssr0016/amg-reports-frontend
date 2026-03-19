@@ -1,4 +1,6 @@
 // FilterBar.jsx
+import { FaTimes } from "react-icons/fa";
+
 export default function FilterBar({ filters, setFilters }) {
   const hasFilters = Object.values(filters).some((v) => v !== "");
 
@@ -17,15 +19,25 @@ export default function FilterBar({ filters, setFilters }) {
     <div className="mb-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-700">Search Filters</h2>
-        {hasFilters && (
+
+        {/* ✅ improved clear filters button */}
+        <div
+          className={`transition-all duration-200 ${
+            hasFilters
+              ? "opacity-100 translate-y-0 pointer-events-auto"
+              : "opacity-0 -translate-y-1 pointer-events-none"
+          }`}
+        >
           <button
             onClick={clearFilters}
-            className="cursor-pointer text-sm text-red-500 hover:text-red-700 transition"
+            className="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-red-500 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-lg transition"
           >
-            ✕ Clear filters
+            <FaTimes className="h-3 w-3" />
+            Clear filters
           </button>
-        )}
+        </div>
       </div>
+
       <div className="grid md:grid-cols-4 gap-4">
         <div className="flex flex-col gap-1">
           <label htmlFor="month" className="text-sm font-medium text-gray-600">
