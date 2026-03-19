@@ -282,40 +282,152 @@ export async function exportSingleReport(report) {
 export async function exportBulkReports(reports, month) {
   const wb = new ExcelJS.Workbook();
 
-  // Summary sheet
-  const sw = wb.addWorksheet("Summary");
-  sw.columns = [
-    { header: "WORKER", key: "worker", width: 25 },
-    { header: "CHURCH NAME", key: "churchName", width: 35 },
-    { header: "AREA ASSIGNMENT", key: "areaAssignment", width: 25 },
-    { header: "MONTH", key: "month", width: 20 },
-    { header: "STATUS", key: "status", width: 15 },
+  // ── REPORT DASHBOARD SHEET ──────────────────────────────────────────────────
+  const dash = wb.addWorksheet("Report Dashboard");
+  dash.columns = [
+    { width: 38 }, // A - Churches
+    { width: 14 }, // B - Status
+    { width: 22 }, // C - Coordinator Remark
+    { width: 18 }, // D - Support Status
   ];
-  sw.getRow(1).eachCell((cell) => {
-    cell.font = F.headerWh;
-    cell.fill = FILL_BLACK;
-    cell.alignment = AL_CTR;
-    cell.border = BORDER_THIN;
-  });
-  reports.forEach((r) => {
-    const row = sw.addRow({
-      worker: r.worker || "",
-      churchName: r.churchName || "",
-      areaAssignment: r.areaAssignment || "",
-      month: r.month || "",
-      status: r.completed ? "Approved" : "For Review",
-    });
-    row.eachCell((cell) => {
-      cell.font = F.normal;
-      cell.alignment = AL_LEFT;
-      cell.border = BORDER_THIN;
-    });
+
+  // Title row
+  dash.mergeCells("A1:D1");
+  const titleCell = dash.getRow(1).getCell(1);
+  titleCell.value = "Report Dashboard";
+  titleCell.font = {
+    name: "Arial",
+    bold: true,
+    size: 18,
+    color: { argb: "FF0000FF" },
+  };
+  titleCell.alignment = { horizontal: "center", vertical: "middle" };
+  titleCell.fill = {
+    type: "pattern",
+    pattern: "solid",
+    fgColor: { argb: "FFDDDDFF" },
+  };
+  dash.getRow(1).height = 30;
+
+  // Header row
+  const headers = [
+    "Churches",
+    "Status",
+    "Coordinator's Remark",
+    "Support Status",
+  ];
+  const headerRow = dash.getRow(2);
+  headerRow.height = 18;
+  headers.forEach((h, i) => {
+    const cell = headerRow.getCell(i + 1);
+    cell.value = h;
+    cell.font = { name: "Arial", bold: true, size: 10 };
+    cell.alignment = { horizontal: "center", vertical: "middle" };
+    cell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE0E0E0" },
+    };
   });
 
-  // Individual sheets per worker
+  // Data rows
+  reports.forEach((r, i) => {
+    const row = dash.getRow(i + 3);
+    row.height = 16;
+
+    // Church name
+    const churchCell = row.getCell(1);
+    churchCell.value = r.churchName || r.worker || "";
+    churchCell.font = { name: "Arial", size: 10 };
+    churchCell.alignment = { horizontal: "left", vertical: "middle" };
+    churchCell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+
+    // Status with color
+    const statusCell = row.getCell(2);
+    const approved = r.completed === true;
+    statusCell.value = approved ? "Approved" : "For Review";
+    statusCell.font = {
+      name: "Arial",
+      bold: true,
+      size: 10,
+      color: { argb: "FFFFFFFF" },
+    };
+    statusCell.alignment = { horizontal: "center", vertical: "middle" };
+    statusCell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: approved ? "FF00AA00" : "FFCC0000" },
+    };
+    statusCell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+
+    // Coordinator Remark (dropdown)
+    const remarkCell = row.getCell(3);
+    remarkCell.value = "Checked";
+    remarkCell.font = {
+      name: "Arial",
+      bold: true,
+      size: 10,
+      color: { argb: "FFFFFFFF" },
+    };
+    remarkCell.alignment = { horizontal: "center", vertical: "middle" };
+    remarkCell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FF0000CC" },
+    };
+    remarkCell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+
+    // Support Status
+    const supportCell = row.getCell(4);
+    supportCell.value = approved ? "Ready for Pick Up" : "On Hold";
+    supportCell.font = {
+      name: "Arial",
+      bold: true,
+      size: 10,
+      color: { argb: approved ? "FFFFFFFF" : "FF000000" },
+    };
+    supportCell.alignment = { horizontal: "center", vertical: "middle" };
+    supportCell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: approved ? "FF0000CC" : "FFFFFF00" },
+    };
+    supportCell.border = {
+      top: { style: "thin" },
+      left: { style: "thin" },
+      bottom: { style: "thin" },
+      right: { style: "thin" },
+    };
+  });
+
+  // One sheet per church
   const usedNames = new Set();
   reports.forEach((report) => {
-    let base = (report.worker || "Unknown").substring(0, 31);
+    let base = (report.churchName || report.worker || "Unknown").substring(
+      0,
+      31,
+    );
     let name = base;
     let n = 1;
     while (usedNames.has(name)) {
