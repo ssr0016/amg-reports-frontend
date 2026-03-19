@@ -20,12 +20,9 @@ const currentYear = new Date().getFullYear();
 const YEARS = [currentYear, currentYear - 1, currentYear - 2];
 
 export default function FilterBar({ filters, setFilters }) {
-  // ✅ hasFilters — hindi kasama ang year kasi laging may year selected
+  // ✅ hasFilters — month at year hindi kasama kasi laging may value sila
   const hasFilters =
-    filters.month !== "" ||
-    filters.worker !== "" ||
-    filters.area !== "" ||
-    filters.church !== "";
+    filters.worker !== "" || filters.area !== "" || filters.church !== "";
 
   const handleChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
