@@ -61,7 +61,7 @@ export default function FilterBar({ filters, setFilters }) {
           <input
             id="church"
             name="church"
-            placeholder="e.g. AMGC Churches"
+            placeholder="e.g. AMGC Church"
             value={filters.church}
             onChange={handleChange}
             className="input"

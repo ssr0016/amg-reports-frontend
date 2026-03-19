@@ -188,7 +188,7 @@ export default function ReportForm({ reportId }) {
           <input
             id="month"
             name="month"
-            placeholder="ex. February 2026"
+            placeholder="ex. January 2026"
             onChange={handleChange}
             value={form.month}
             className="input"
@@ -201,7 +201,7 @@ export default function ReportForm({ reportId }) {
           <input
             id="worker"
             name="worker"
-            placeholder="Worker Name"
+            placeholder="e.g. Juan dela Cruz"
             onChange={handleChange}
             value={form.worker}
             className="input"
@@ -217,7 +217,7 @@ export default function ReportForm({ reportId }) {
           <input
             id="areaAssignment"
             name="areaAssignment"
-            placeholder="Area Assignment"
+            placeholder="e.g. Metro Manila"
             onChange={handleChange}
             value={form.areaAssignment}
             className="input"
@@ -233,7 +233,7 @@ export default function ReportForm({ reportId }) {
           <input
             id="churchName"
             name="churchName"
-            placeholder="Church Name"
+            placeholder="e.g. AMGC Church"
             onChange={handleChange}
             value={form.churchName}
             className="input"
