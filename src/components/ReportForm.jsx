@@ -200,7 +200,7 @@ export default function ReportForm({ reportId }) {
           <input
             id="month"
             name="month"
-            placeholder="e.g. February"
+            placeholder="e.g. January"
             onChange={handleMonthChange} // ✅ dedicated handler
             value={form.month}
             className="input"
