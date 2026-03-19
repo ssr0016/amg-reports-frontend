@@ -1,5 +1,5 @@
 // Dashboard.jsx
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import API from "../services/api";
 import ReportList from "../components/ReportList";
 import FilterBar from "../components/FilterBar";
@@ -7,6 +7,7 @@ import Pagination from "../components/Pagination";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ITEMS_PER_PAGE } from "../constants";
+import { useDebounce } from "../hooks/useDebounce";
 import toast from "react-hot-toast";
 
 function Dashboard() {
@@ -24,6 +25,9 @@ function Dashboard() {
     church: "",
   });
 
+  // ✅ debounce filters — wait 300ms after user stops typing before filtering
+  const debouncedFilters = useDebounce(filters, 300);
+
   const fetchReports = useCallback(async () => {
     try {
       setLoading(true);
@@ -40,36 +44,41 @@ function Dashboard() {
     fetchReports();
   }, [fetchReports]);
 
-  const filteredReports = reports.filter((r) => {
-    const monthDisplay = `${r.month || ""} ${r.year || ""}`.toLowerCase();
+  // ✅ useMemo — only recomputes when debouncedFilters or reports change
+  const filteredReports = useMemo(() => {
+    return reports.filter((r) => {
+      const monthDisplay = `${r.month || ""} ${r.year || ""}`.toLowerCase();
+      const worker = (r.worker || "").toLowerCase();
+      const area = (r.areaAssignment || "").toLowerCase();
+      const church = (r.churchName || "").toLowerCase();
 
-    return (
-      (filters.month === "" ||
-        monthDisplay.includes(filters.month.toLowerCase())) &&
-      (filters.worker === "" ||
-        (r.worker || "")
-          .toLowerCase()
-          .includes(filters.worker.toLowerCase())) &&
-      (filters.area === "" ||
-        (r.areaAssignment || "")
-          .toLowerCase()
-          .includes(filters.area.toLowerCase())) &&
-      (filters.church === "" ||
-        (r.churchName || "")
-          .toLowerCase()
-          .includes(filters.church.toLowerCase()))
-    );
-  });
+      return (
+        (debouncedFilters.month === "" ||
+          monthDisplay.includes(debouncedFilters.month.toLowerCase())) &&
+        (debouncedFilters.worker === "" ||
+          worker.includes(debouncedFilters.worker.toLowerCase())) &&
+        (debouncedFilters.area === "" ||
+          area.includes(debouncedFilters.area.toLowerCase())) &&
+        (debouncedFilters.church === "" ||
+          church.includes(debouncedFilters.church.toLowerCase()))
+      );
+    });
+  }, [reports, debouncedFilters]);
 
+  // ✅ reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters]);
+  }, [debouncedFilters]);
 
   const totalPages = Math.ceil(filteredReports.length / ITEMS_PER_PAGE);
-  const paginatedReports = filteredReports.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
-  );
+
+  // ✅ useMemo for paginated slice too
+  const paginatedReports = useMemo(() => {
+    return filteredReports.slice(
+      (currentPage - 1) * ITEMS_PER_PAGE,
+      currentPage * ITEMS_PER_PAGE,
+    );
+  }, [filteredReports, currentPage]);
 
   const handleLogout = () => {
     logout();

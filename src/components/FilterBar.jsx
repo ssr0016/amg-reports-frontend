@@ -1,4 +1,7 @@
+// FilterBar.jsx
 export default function FilterBar({ filters, setFilters }) {
+  const hasFilters = Object.values(filters).some((v) => v !== "");
+
   const handleChange = (e) => {
     setFilters({
       ...filters,
@@ -6,11 +9,23 @@ export default function FilterBar({ filters, setFilters }) {
     });
   };
 
+  const clearFilters = () => {
+    setFilters({ month: "", worker: "", area: "", church: "" });
+  };
+
   return (
     <div className="mb-6">
-      <h2 className="text-lg font-semibold text-gray-700 mb-4">
-        Search Filters
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-gray-700">Search Filters</h2>
+        {hasFilters && (
+          <button
+            onClick={clearFilters}
+            className="cursor-pointer text-sm text-red-500 hover:text-red-700 transition"
+          >
+            ✕ Clear filters
+          </button>
+        )}
+      </div>
       <div className="grid md:grid-cols-4 gap-4">
         <div className="flex flex-col gap-1">
           <label htmlFor="month" className="text-sm font-medium text-gray-600">
