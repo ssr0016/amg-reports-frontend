@@ -276,11 +276,7 @@ export default function AdminPanel() {
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
-  useEffect(() => {
-    setUserPage(1);
-    updateURL({ upage: 1 });
-  }, [userStatusFilter]);
-  // ✅ Removed: setReportPage(1) on bulkMonth/bulkYear — now handled in setBulkMonth/setBulkYear directly
+  // ✅ No more useEffect resets — page resets are handled directly in handlers
 
   const toggleComplete = async (id) => {
     try {
