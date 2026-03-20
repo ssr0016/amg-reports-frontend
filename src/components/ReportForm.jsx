@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import API from "../services/api";
 import Spinner from "./Spinner";
 import { FaChevronDown, FaChevronUp } from "react-icons/fa";
+import { useAuth } from "../context/AuthContext"; // ✅ bagong import
 
 const defaultWeeks5 = { week1: "", week2: "", week3: "", week4: "", week5: "" };
 
@@ -37,6 +38,19 @@ const MONTHS_DISPLAY = [
   "December",
 ];
 const currentYear = new Date().getFullYear();
+
+// ✅ Kunin ang previous month display string (e.g. ngayong March → "February")
+function getPreviousMonthDisplay() {
+  const now = new Date();
+  const prevMonthIndex = now.getMonth() === 0 ? 11 : now.getMonth() - 1;
+  return MONTHS_DISPLAY[prevMonthIndex];
+}
+
+// ✅ Kunin ang year ng previous month (para sa January → December ng nakaraang taon)
+function getPreviousMonthYear() {
+  const now = new Date();
+  return now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+}
 
 function parseMonthFromInput(input) {
   const lower = input.trim().toLowerCase();
@@ -114,7 +128,7 @@ const textareaClass =
 
 const defaultForm = {
   month: "",
-  year: currentYear - 1,
+  year: currentYear,
   worker: "",
   areaAssignment: "",
   churchName: "",
@@ -148,26 +162,55 @@ const defaultForm = {
 // ── Main Form ─────────────────────────────────────────────────────────────────
 export default function ReportForm({ reportId }) {
   const navigate = useNavigate();
+  const { user } = useAuth(); // ✅ kunin ang logged-in user
   const isEditing = !!reportId;
 
-  // Unique localStorage key per mode — create vs edit
   const storageKey = isEditing
     ? `reportForm_edit_${reportId}`
     : "reportForm_new";
 
-  // Lazy init: load from localStorage if available, otherwise use defaults
+  // ✅ Lazy init — pre-fill from user kung create mode
   const [form, setForm] = useState(() => {
+    if (isEditing) {
+      // Edit mode — localStorage o API data ang bahala
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) return JSON.parse(saved);
+      } catch {}
+      return { ...defaultForm };
+    }
+
+    // Create mode — may draft ba?
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const draft = JSON.parse(saved);
+        // ✅ Kung may draft pero walang laman ang user fields,
+        // i-override ng user data para ma-pre-fill kahit may nakalagay na draft
+        return {
+          ...draft,
+          month: draft.month || getPreviousMonthDisplay(),
+          year: draft.year || getPreviousMonthYear(),
+          worker: draft.worker || user?.name || "",
+          areaAssignment: draft.areaAssignment || user?.areaAssignment || "",
+          churchName: draft.churchName || user?.churchName || "",
+        };
+      }
     } catch {}
-    return { ...defaultForm };
+
+    // ✅ Walang draft — pre-fill mula sa user + auto-set previous month
+    return {
+      ...defaultForm,
+      month: getPreviousMonthDisplay(),
+      year: getPreviousMonthYear(),
+      worker: user?.name || "",
+      areaAssignment: user?.areaAssignment || "",
+      churchName: user?.churchName || "",
+    };
   });
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
-  // Guard flag: huwag mag-auto-save habang nag-fe-fetch pa (edit mode)
-  // Para hindi ma-overwrite ng empty form ang saved draft bago dumating ang API data
   const [readyToSave, setReadyToSave] = useState(!isEditing);
 
   // Auto-save to localStorage — only after fetch is done (or create mode agad)
@@ -186,8 +229,6 @@ export default function ReportForm({ reportId }) {
           setFetching(true);
           const res = await API.get(`/reports/${reportId}`);
 
-          // Kung may saved draft na sa localStorage, gamitin yun (retain ang edits)
-          // Kung wala pa, gamitin ang data mula sa API
           const saved = localStorage.getItem(storageKey);
           if (saved) {
             try {
@@ -202,7 +243,6 @@ export default function ReportForm({ reportId }) {
           toast.error("Failed to load report.");
         } finally {
           setFetching(false);
-          // Safe na mag-save ngayon — may data na ang form
           setReadyToSave(true);
         }
       };
@@ -215,6 +255,8 @@ export default function ReportForm({ reportId }) {
     if (name === "month") {
       const now = new Date();
       const monthIndex = VALID_MONTHS.indexOf(value.toLowerCase());
+      // ✅ Kung ang pinili na month ay mas maaga sa current month, current year
+      // Kung current month o mas bago (edge case), current year pa rin
       const autoYear =
         monthIndex < now.getMonth() ? now.getFullYear() : now.getFullYear();
       setForm({ ...form, month: value, year: autoYear });
@@ -272,7 +314,6 @@ export default function ReportForm({ reportId }) {
         await API.post("/reports", form);
         toast.success("Report created successfully!");
       }
-      // Clear draft after successful submit
       clearDraft();
       navigate("/");
     } catch (error) {

@@ -104,6 +104,27 @@ export default function UserFormModal({
             />
           </Field>
 
+          {/* ✅ Bagong fields */}
+          <Field label="Area Assignment">
+            <input
+              name="areaAssignment"
+              placeholder="e.g. Metro Manila"
+              value={form.areaAssignment || ""}
+              onChange={onChange}
+              className={inputClass}
+            />
+          </Field>
+
+          <Field label="Church Name">
+            <input
+              name="churchName"
+              placeholder="e.g. AMGC Church"
+              value={form.churchName || ""}
+              onChange={onChange}
+              className={inputClass}
+            />
+          </Field>
+
           <Field
             label={
               editingUserId ? "New Password (leave blank to keep)" : "Password"
