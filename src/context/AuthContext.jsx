@@ -9,7 +9,6 @@ export function AuthProvider({ children }) {
   const [loadingAuth, setLoadingAuth] = useState(true);
 
   useEffect(() => {
-    // ✅ i-restore ang user mula sa localStorage kapag nag-refresh
     const savedUser = localStorage.getItem("user");
     const savedToken = localStorage.getItem("token");
 
@@ -35,7 +34,14 @@ export function AuthProvider({ children }) {
     return user;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // ✅ Log logout — fire and forget, hindi natin hihintayin
+    try {
+      await API.post("/auth/logout-log");
+    } catch {
+      // silent fail — huwag i-block ang logout kahit may error sa logging
+    }
+
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
@@ -48,7 +54,6 @@ export function AuthProvider({ children }) {
   );
 }
 
-// ✅ custom hook para madaling gamitin
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error("useAuth must be used inside AuthProvider");

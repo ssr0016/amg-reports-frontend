@@ -15,6 +15,7 @@ import { ITEMS_PER_PAGE, MONTHS } from "../constants";
 import AdminReportsTab from "../components/AdminReportsTab";
 import AdminTrackerTab from "../components/AdminTrackerTab";
 import AdminUsersTab from "../components/AdminUsersTab";
+import AdminLogsTab from "../components/AdminLogsTab";
 import UserFormModal from "../components/UserFormModal";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
 
@@ -271,6 +272,7 @@ export default function AdminPanel() {
     { key: "reports", label: "Reports" },
     { key: "tracker", label: "📋 Tracker" },
     { key: "users", label: "Users" },
+    { key: "logs", label: "🕵️ Logs" },
   ];
 
   return (
@@ -433,6 +435,8 @@ export default function AdminPanel() {
           currentUserId={user?.id}
         />
       )}
+
+      {activeTab === "logs" && <AdminLogsTab />}
 
       <UserFormModal
         show={showUserForm}

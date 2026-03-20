@@ -1,9 +1,7 @@
 // /src/utils/exportExcel.js
-// Requires: npm install exceljs file-saver
-// Remove: npm uninstall xlsx
-
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
+import API from "../services/api"; // ✅ para ma-log ang downloads
 
 // ─── STYLES ──────────────────────────────────────────────────────────────────
 
@@ -83,7 +81,6 @@ function buildSheet(ws, report) {
     { width: 12 },
   ];
 
-  // Row 1 — Title
   ws.mergeCells("A1:G1");
   ws.getRow(1).height = 22;
   const r1c1 = ws.getRow(1).getCell(1);
@@ -91,7 +88,6 @@ function buildSheet(ws, report) {
   r1c1.font = F.title;
   r1c1.alignment = AL_CTR;
 
-  // Row 2 — Subtitle
   ws.mergeCells("A2:G2");
   ws.getRow(2).height = 16;
   const r2c1 = ws.getRow(2).getCell(1);
@@ -99,12 +95,10 @@ function buildSheet(ws, report) {
   r2c1.font = F.subtitle;
   r2c1.alignment = AL_CTR;
 
-  // Row 3 — blank spacer
   ws.getRow(3).height = 6;
 
-  // Rows 4–7 — Info fields
   [
-    [4, "Month of:", `${report.month || ""} ${report.year || ""}`], // ✅ added year
+    [4, "Month of:", `${report.month || ""} ${report.year || ""}`],
     [5, "Worker", report.worker || ""],
     [6, "Area of Assignment", report.areaAssignment || ""],
     [7, "Name of Church/Outreach:", report.churchName || ""],
@@ -121,7 +115,6 @@ function buildSheet(ws, report) {
     vc.border = BORDER_BTM;
   });
 
-  // Row 8 — "Weekly Attendance" black header
   ws.mergeCells("A8:G8");
   ws.getRow(8).height = 16;
   const r8c1 = ws.getRow(8).getCell(1);
@@ -130,7 +123,6 @@ function buildSheet(ws, report) {
   r8c1.fill = FILL_BLACK;
   r8c1.alignment = AL_LEFT;
 
-  // Row 9 — Column headers
   ws.getRow(9).height = 16;
   [
     "Activities",
@@ -148,7 +140,6 @@ function buildSheet(ws, report) {
     cell.border = BORDER_THIN;
   });
 
-  // Rows 10–18 — Attendance
   [
     ["Worship Service", report.worshipService],
     ["Sunday School", report.sundaySchool],
@@ -161,36 +152,21 @@ function buildSheet(ws, report) {
     ["Outreach", report.outreach],
   ].forEach(([label, data], i) => actRow(ws, 10 + i, label, data, F.normal));
 
-  // Row 19 — blank
   borderRow(ws, 19, 1, 7);
-
-  // Rows 20–22 — Training / Seminars
   actRow(ws, 20, "Training/ Seminars", report.training || {}, F.bold);
   actRow(ws, 21, "Leadership Conference", {}, F.small, true);
   actRow(ws, 22, "Leadership Training", report.leadership || {}, F.small, true);
-
-  // Row 23 — blank
   borderRow(ws, 23, 1, 7);
-
-  // Rows 24–25 — Other / Family Day
   actRow(ws, 24, "Other", report.other || {}, F.bold);
   actRow(ws, 25, "Family Day", report.familyDay || {}, F.small, true);
-
-  // Row 26 — blank
   borderRow(ws, 26, 1, 7);
-
-  // Row 27 — Tithes & Offering
   actRow(ws, 27, "Tithes & Offering", report.tithesOffering || {}, F.normal);
-
-  // Row 28 — blank
   borderRow(ws, 28, 1, 7);
 
-  // Row 29 — black divider
   ws.mergeCells("A29:G29");
   ws.getRow(29).height = 12;
   for (let c = 1; c <= 7; c++) ws.getRow(29).getCell(c).fill = FILL_BLACK;
 
-  // Row 30 — 2nd column headers
   ws.getRow(30).height = 16;
   ["", "Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Average"].forEach(
     (h, i) => {
@@ -202,7 +178,6 @@ function buildSheet(ws, report) {
     },
   );
 
-  // Rows 31–36 — Ministry activities
   [
     ["Home Visited", report.homeVisited],
     ["Bible Study Group Led", report.bibleStudyGroupLed],
@@ -212,7 +187,6 @@ function buildSheet(ws, report) {
     ["Person Led To Christ", report.personEvangelized],
   ].forEach(([label, data], i) => actRow(ws, 31 + i, label, data, F.normal));
 
-  // Row 37 — Names
   ws.mergeCells("B37:G37");
   ws.getRow(37).height = 16;
   ws.getRow(37).getCell(1).value = "Names:";
@@ -227,7 +201,6 @@ function buildSheet(ws, report) {
     borderRow(ws, r, 1, 7);
   });
 
-  // Row 40 — Narrative Report
   ws.mergeCells("B40:G40");
   ws.getRow(40).height = 50;
   ws.getRow(40).getCell(1).value = "Narrative Report:";
@@ -237,11 +210,9 @@ function buildSheet(ws, report) {
   ws.getRow(40).getCell(2).alignment = AL_TOP_LEFT;
   borderRow(ws, 40, 1, 7);
 
-  // Row 41 — blank
   ws.mergeCells("B41:G41");
   borderRow(ws, 41, 1, 7);
 
-  // Row 42 — Challenges
   ws.mergeCells("B42:G42");
   ws.getRow(42).height = 35;
   ws.getRow(42).getCell(1).value = "Challenges/Problem\nEncountered";
@@ -251,7 +222,6 @@ function buildSheet(ws, report) {
   ws.getRow(42).getCell(2).alignment = AL_TOP_LEFT;
   borderRow(ws, 42, 1, 7);
 
-  // Row 43 — Prayer Request
   ws.mergeCells("B43:G43");
   ws.getRow(43).height = 20;
   ws.getRow(43).getCell(1).value = "Prayer Request";
@@ -271,29 +241,41 @@ export async function exportSingleReport(report) {
     `${report.worker || "Report"}_${report.month || "Unknown"}_${report.year || ""}.xlsx`.replace(
       /\s+/g,
       "_",
-    ); // ✅ added year sa filename
+    );
 
   const buffer = await wb.xlsx.writeBuffer();
   saveAs(new Blob([buffer], { type: "application/octet-stream" }), fileName);
+
+  // ✅ Log single download — fire and forget
+  try {
+    await API.post("/reports/log-download", {
+      type: "single",
+      reportId: report._id,
+      workerName: report.worker,
+      churchName: report.churchName,
+      month: report.month,
+      year: report.year,
+    });
+  } catch {
+    // silent fail — hindi i-block ang download kahit may error sa logging
+  }
 }
 
 // ─── EXPORT BULK ──────────────────────────────────────────────────────────────
 
-export async function exportBulkReports(reports, month) {
+export async function exportBulkReports(reports, monthYear) {
   const wb = new ExcelJS.Workbook();
 
-  // ── REPORT DASHBOARD SHEET ──────────────────────────────────────────────────
   const dash = wb.addWorksheet("Report Dashboard");
   dash.columns = [
-    { width: 38 }, // A - Churches
-    { width: 14 }, // B - Month
-    { width: 10 }, // C - Year  ✅ new column
-    { width: 14 }, // D - Status
-    { width: 22 }, // E - Coordinator Remark
-    { width: 18 }, // F - Support Status
+    { width: 38 },
+    { width: 14 },
+    { width: 10 },
+    { width: 14 },
+    { width: 22 },
+    { width: 18 },
   ];
 
-  // Title row — ✅ extended to F1
   dash.mergeCells("A1:F1");
   const titleCell = dash.getRow(1).getCell(1);
   titleCell.value = "Report Dashboard";
@@ -311,7 +293,6 @@ export async function exportBulkReports(reports, month) {
   };
   dash.getRow(1).height = 30;
 
-  // Header row — ✅ added Month and Year columns
   const headers = [
     "Churches",
     "Month",
@@ -335,34 +316,30 @@ export async function exportBulkReports(reports, month) {
     };
   });
 
-  // Data rows
   reports.forEach((r, i) => {
     const row = dash.getRow(i + 3);
     row.height = 16;
 
-    // A — Church name
     const churchCell = row.getCell(1);
     churchCell.value = r.churchName || r.worker || "";
     churchCell.font = { name: "Arial", size: 10 };
     churchCell.alignment = { horizontal: "left", vertical: "middle" };
     churchCell.border = BORDER_THIN;
 
-    // B — Month ✅
     const monthCell = row.getCell(2);
     monthCell.value = r.month || "";
     monthCell.font = { name: "Arial", size: 10 };
     monthCell.alignment = { horizontal: "center", vertical: "middle" };
     monthCell.border = BORDER_THIN;
 
-    // C — Year ✅
     const yearCell = row.getCell(3);
     yearCell.value = r.year || "";
     yearCell.font = { name: "Arial", bold: true, size: 10 };
     yearCell.alignment = { horizontal: "center", vertical: "middle" };
     yearCell.border = BORDER_THIN;
 
-    // D — Status with color
     const approved = r.completed === true;
+
     const statusCell = row.getCell(4);
     statusCell.value = approved ? "Approved" : "For Review";
     statusCell.font = {
@@ -379,7 +356,6 @@ export async function exportBulkReports(reports, month) {
     };
     statusCell.border = BORDER_THIN;
 
-    // E — Coordinator Remark
     const remarkCell = row.getCell(5);
     remarkCell.value = "Checked";
     remarkCell.font = {
@@ -396,7 +372,6 @@ export async function exportBulkReports(reports, month) {
     };
     remarkCell.border = BORDER_THIN;
 
-    // F — Support Status
     const supportCell = row.getCell(6);
     supportCell.value = approved ? "Ready for Pick Up" : "On Hold";
     supportCell.font = {
@@ -414,7 +389,6 @@ export async function exportBulkReports(reports, month) {
     supportCell.border = BORDER_THIN;
   });
 
-  // One sheet per church
   const usedNames = new Set();
   reports.forEach((report) => {
     let base = (report.churchName || report.worker || "Unknown").substring(
@@ -431,12 +405,29 @@ export async function exportBulkReports(reports, month) {
     buildSheet(wb.addWorksheet(name), report);
   });
 
-  // ✅ added year sa bulk filename din
   const fileName =
-    `Reports_${month || "All"}_${new Date().getFullYear()}.xlsx`.replace(
+    `Reports_${monthYear || "All"}_${new Date().getFullYear()}.xlsx`.replace(
       /\s+/g,
       "_",
     );
+
   const buffer = await wb.xlsx.writeBuffer();
   saveAs(new Blob([buffer], { type: "application/octet-stream" }), fileName);
+
+  // ✅ Log bulk download — fire and forget
+  try {
+    // Parse month and year from monthYear string e.g. "January 2026"
+    const parts = (monthYear || "").split(" ");
+    const month = parts[0] || "";
+    const year = parts[1] || new Date().getFullYear();
+
+    await API.post("/reports/log-download", {
+      type: "bulk",
+      month,
+      year,
+      count: reports.length,
+    });
+  } catch {
+    // silent fail
+  }
 }
