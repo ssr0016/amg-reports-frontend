@@ -1,9 +1,10 @@
-// ReportForm.jsx
+// /src/components/ReportForm.jsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import API from "../services/api";
 import Spinner from "./Spinner";
+import { FaChevronDown, FaChevronUp } from "react-icons/fa";
 
 const defaultWeeks5 = { week1: "", week2: "", week3: "", week4: "", week5: "" };
 
@@ -21,24 +22,105 @@ const VALID_MONTHS = [
   "november",
   "december",
 ];
+const MONTHS_DISPLAY = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+const currentYear = new Date().getFullYear();
+const YEARS = [currentYear - 1, currentYear - 2, currentYear - 3];
 
 function parseMonthFromInput(input) {
   const lower = input.trim().toLowerCase();
   return VALID_MONTHS.find((m) => lower.includes(m));
 }
 
-function parseYearFromInput(input) {
-  const match = input.match(/\d{4}/);
-  return match ? parseInt(match[0]) : new Date().getFullYear();
+// ── Collapsible Section ───────────────────────────────────────────────────────
+function FormSection({ title, icon, children, defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="mb-4 rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="cursor-pointer w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-base">{icon}</span>
+          <span className="text-sm font-semibold text-gray-700">{title}</span>
+        </div>
+        {open ? (
+          <FaChevronUp className="h-3 w-3 text-gray-400" />
+        ) : (
+          <FaChevronDown className="h-3 w-3 text-gray-400" />
+        )}
+      </button>
+      {open && <div className="px-4 pt-3 pb-4 bg-white">{children}</div>}
+    </div>
+  );
 }
 
+// ── Week Row ──────────────────────────────────────────────────────────────────
+function WeekRow({ title, category, handler, values = {} }) {
+  return (
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3 last:mb-0">
+      <p className="text-xs font-medium text-gray-500 w-full sm:w-44 shrink-0">
+        {title}
+      </p>
+      <div className="grid grid-cols-5 gap-1.5 flex-1">
+        {[1, 2, 3, 4, 5].map((w) => (
+          <input
+            key={w}
+            type="number"
+            min="0"
+            placeholder={`Wk ${w}`}
+            className="w-full text-center text-sm border border-gray-200 rounded-lg px-2 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition bg-white placeholder:text-gray-300"
+            value={values[`week${w}`] ?? ""}
+            onChange={(e) => handler(category, `week${w}`, e.target.value)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ── Input Field ───────────────────────────────────────────────────────────────
+function Field({ label, required, children }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+        {label}
+        {required && <span className="text-red-500 ml-0.5">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+const inputClass =
+  "w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition bg-white placeholder:text-gray-400";
+const selectClass =
+  "cursor-pointer appearance-none w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition bg-white";
+const textareaClass =
+  "w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition bg-white placeholder:text-gray-400 resize-none";
+
+// ── Main Form ─────────────────────────────────────────────────────────────────
 export default function ReportForm({ reportId }) {
   const navigate = useNavigate();
   const isEditing = !!reportId;
 
   const [form, setForm] = useState({
     month: "",
-    year: new Date().getFullYear(), // ✅ explicit year field
+    year: currentYear - 1,
     worker: "",
     areaAssignment: "",
     churchName: "",
@@ -90,31 +172,28 @@ export default function ReportForm({ reportId }) {
   }, [reportId]);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  // ✅ dedicated handler for month — keeps year in sync
-  const handleMonthChange = (e) => {
-    const value = e.target.value;
-    const parsed = parseMonthFromInput(value);
-    const parsedYear = parseYearFromInput(value);
-    setForm({
-      ...form,
-      month: parsed ? parsed.charAt(0).toUpperCase() + parsed.slice(1) : value,
-      year: parsedYear,
-    });
+    const { name, value } = e.target;
+    if (name === "month") {
+      const now = new Date();
+      const monthIndex = VALID_MONTHS.indexOf(value.toLowerCase());
+      // ✅ kung ang month ay previous month (strictly less than current), current year
+      // kung ang month ay current o future, current year din — para ma-block ng validation
+      const autoYear =
+        monthIndex < now.getMonth()
+          ? now.getFullYear() // previous month this year e.g. February = 2026
+          : now.getFullYear(); // current/future month — same year, mabo-block ng validation
+      setForm({ ...form, month: value, year: autoYear });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
   };
 
   const handleWeekChange = (category, week, value) => {
-    setForm({
-      ...form,
-      [category]: { ...form[category], [week]: value },
-    });
+    setForm({ ...form, [category]: { ...form[category], [week]: value } });
   };
 
   const submit = async (e) => {
     e.preventDefault();
-
     if (!form.month.trim()) return toast.error("Month is required.");
     if (!form.worker.trim()) return toast.error("Worker name is required.");
     if (!form.areaAssignment.trim())
@@ -122,24 +201,24 @@ export default function ReportForm({ reportId }) {
     if (!form.churchName.trim()) return toast.error("Church name is required.");
 
     const parsedMonth = parseMonthFromInput(form.month);
-    if (!parsedMonth) {
-      toast.error("Please enter a valid month (e.g. February).");
-      return;
-    }
+    if (!parsedMonth)
+      return toast.error("Please enter a valid month (e.g. February).");
 
     const now = new Date();
-    const currentMonthIndex = now.getMonth();
+    const currentMonthIndex = now.getMonth(); // 0-based
     const currentYear = now.getFullYear();
     const inputMonthIndex = VALID_MONTHS.indexOf(parsedMonth);
+    const inputYear = parseInt(form.year);
 
-    const inputDate = new Date(form.year, inputMonthIndex, 1); // ✅ use form.year
+    // ✅ Block current month and future months
+    const inputDate = new Date(inputYear, inputMonthIndex, 1);
     const currentDate = new Date(currentYear, currentMonthIndex, 1);
 
     if (inputDate >= currentDate) {
       const monthName =
         parsedMonth.charAt(0).toUpperCase() + parsedMonth.slice(1);
       toast.error(
-        `You cannot report for ${monthName} ${form.year} yet. Please report for a previous month only.`,
+        `You cannot report for ${monthName} ${inputYear} yet. Please report for a previous month only.`,
       );
       return;
     }
@@ -147,17 +226,15 @@ export default function ReportForm({ reportId }) {
     try {
       setLoading(true);
       if (isEditing) {
-        await API.put(`/reports/${reportId}`, form); // ✅ form already has year
+        await API.put(`/reports/${reportId}`, form);
         toast.success("Report updated successfully!");
       } else {
-        await API.post("/reports", form); // ✅ form already has year
+        await API.post("/reports", form);
         toast.success("Report created successfully!");
       }
       navigate("/");
     } catch (error) {
-      const message =
-        error.response?.data?.message || "Failed to submit report.";
-      toast.error(message);
+      toast.error(error.response?.data?.message || "Failed to submit report.");
     } finally {
       setLoading(false);
     }
@@ -172,348 +249,328 @@ export default function ReportForm({ reportId }) {
   }
 
   return (
-    <form
-      onSubmit={submit}
-      className="bg-white shadow-lg rounded-xl p-4 sm:p-8 mb-10 border border-gray-100"
-    >
-      {/* HEADER WITH BACK BUTTON */}
-      <div className="flex items-center gap-3 mb-6">
+    <form onSubmit={submit} className="mb-10">
+      {/* ── BASIC INFO ── */}
+      <FormSection title="Basic Information" icon="📋" defaultOpen={true}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Month" required>
+            <div className="relative">
+              <select
+                name="month"
+                value={form.month}
+                onChange={handleChange}
+                className={selectClass}
+              >
+                <option value="">Select Month</option>
+                {MONTHS_DISPLAY.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+              <FaChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 h-3 w-3" />
+            </div>
+          </Field>
+
+          <Field label="Worker Name" required>
+            <input
+              name="worker"
+              placeholder="e.g. Juan dela Cruz"
+              onChange={handleChange}
+              value={form.worker}
+              className={inputClass}
+            />
+          </Field>
+
+          <Field label="Area Assignment" required>
+            <input
+              name="areaAssignment"
+              placeholder="e.g. Metro Manila"
+              onChange={handleChange}
+              value={form.areaAssignment}
+              className={inputClass}
+            />
+          </Field>
+
+          <Field label="Church Name" required>
+            <input
+              name="churchName"
+              placeholder="e.g. AMGC Church"
+              onChange={handleChange}
+              value={form.churchName}
+              className={inputClass}
+            />
+          </Field>
+        </div>
+      </FormSection>
+
+      {/* ── WEEKLY ATTENDANCE ── */}
+      <FormSection title="Weekly Attendance" icon="🙏" defaultOpen={true}>
+        {/* Week headers */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+          <div className="hidden sm:block w-44 shrink-0" />
+          <div className="grid grid-cols-5 gap-1.5 flex-1">
+            {["Wk 1", "Wk 2", "Wk 3", "Wk 4", "Wk 5"].map((w) => (
+              <p
+                key={w}
+                className="text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wide"
+              >
+                {w}
+              </p>
+            ))}
+          </div>
+        </div>
+        <WeekRow
+          title="Worship Service"
+          category="worshipService"
+          handler={handleWeekChange}
+          values={form.worshipService}
+        />
+        <WeekRow
+          title="Sunday School"
+          category="sundaySchool"
+          handler={handleWeekChange}
+          values={form.sundaySchool}
+        />
+        <WeekRow
+          title="Prayer Meeting"
+          category="prayerMeeting"
+          handler={handleWeekChange}
+          values={form.prayerMeeting}
+        />
+        <WeekRow
+          title="Bible Studies"
+          category="bibleStudies"
+          handler={handleWeekChange}
+          values={form.bibleStudies}
+        />
+      </FormSection>
+
+      {/* ── FELLOWSHIP ── */}
+      <FormSection title="Fellowship" icon="👥" defaultOpen={false}>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+          <div className="hidden sm:block w-44 shrink-0" />
+          <div className="grid grid-cols-5 gap-1.5 flex-1">
+            {["Wk 1", "Wk 2", "Wk 3", "Wk 4", "Wk 5"].map((w) => (
+              <p
+                key={w}
+                className="text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wide"
+              >
+                {w}
+              </p>
+            ))}
+          </div>
+        </div>
+        <WeekRow
+          title="Men's Fellowship"
+          category="mensFellowship"
+          handler={handleWeekChange}
+          values={form.mensFellowship}
+        />
+        <WeekRow
+          title="Women's Fellowship"
+          category="womensFellowship"
+          handler={handleWeekChange}
+          values={form.womensFellowship}
+        />
+        <WeekRow
+          title="Youth Fellowship"
+          category="youthFellowship"
+          handler={handleWeekChange}
+          values={form.youthFellowship}
+        />
+        <WeekRow
+          title="Children Fellowship"
+          category="childrenFellowship"
+          handler={handleWeekChange}
+          values={form.childrenFellowship}
+        />
+        <WeekRow
+          title="Tithes & Offering (₱)"
+          category="tithesOffering"
+          handler={handleWeekChange}
+          values={form.tithesOffering}
+        />
+      </FormSection>
+
+      {/* ── WEEKLY MINISTRY ── */}
+      <FormSection title="Weekly Ministry" icon="📖" defaultOpen={false}>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+          <div className="hidden sm:block w-44 shrink-0" />
+          <div className="grid grid-cols-5 gap-1.5 flex-1">
+            {["Wk 1", "Wk 2", "Wk 3", "Wk 4", "Wk 5"].map((w) => (
+              <p
+                key={w}
+                className="text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wide"
+              >
+                {w}
+              </p>
+            ))}
+          </div>
+        </div>
+        <WeekRow
+          title="Homes Visited"
+          category="homeVisited"
+          handler={handleWeekChange}
+          values={form.homeVisited}
+        />
+        <WeekRow
+          title="Bible Study Group Led"
+          category="bibleStudyGroupLed"
+          handler={handleWeekChange}
+          values={form.bibleStudyGroupLed}
+        />
+        <WeekRow
+          title="Sermon Preached"
+          category="sermonPreached"
+          handler={handleWeekChange}
+          values={form.sermonPreached}
+        />
+        <WeekRow
+          title="Newly Contacted"
+          category="personNewlyContacted"
+          handler={handleWeekChange}
+          values={form.personNewlyContacted}
+        />
+        <WeekRow
+          title="Person Followed Up"
+          category="personFollowedUp"
+          handler={handleWeekChange}
+          values={form.personFollowedUp}
+        />
+        <WeekRow
+          title="Person Evangelized"
+          category="personEvangelized"
+          handler={handleWeekChange}
+          values={form.personEvangelized}
+        />
+      </FormSection>
+
+      {/* ── MINISTRY ACTIVITIES ── */}
+      <FormSection title="Ministry Activities" icon="⛪" defaultOpen={false}>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
+          <div className="hidden sm:block w-44 shrink-0" />
+          <div className="grid grid-cols-5 gap-1.5 flex-1">
+            {["Wk 1", "Wk 2", "Wk 3", "Wk 4", "Wk 5"].map((w) => (
+              <p
+                key={w}
+                className="text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wide"
+              >
+                {w}
+              </p>
+            ))}
+          </div>
+        </div>
+        <WeekRow
+          title="Outreach"
+          category="outreach"
+          handler={handleWeekChange}
+          values={form.outreach}
+        />
+        <WeekRow
+          title="Training"
+          category="training"
+          handler={handleWeekChange}
+          values={form.training}
+        />
+        <WeekRow
+          title="Leadership"
+          category="leadership"
+          handler={handleWeekChange}
+          values={form.leadership}
+        />
+        <WeekRow
+          title="Baptism"
+          category="baptism"
+          handler={handleWeekChange}
+          values={form.baptism}
+        />
+        <WeekRow
+          title="Other"
+          category="other"
+          handler={handleWeekChange}
+          values={form.other}
+        />
+        <WeekRow
+          title="Family Day"
+          category="familyDay"
+          handler={handleWeekChange}
+          values={form.familyDay}
+        />
+      </FormSection>
+
+      {/* ── REPORT DETAILS ── */}
+      <FormSection title="Report Details" icon="📝" defaultOpen={true}>
+        <div className="flex flex-col gap-4">
+          <Field label="Names of new believers / baptized">
+            <textarea
+              name="names"
+              placeholder="e.g. Juan dela Cruz, Maria Santos"
+              onChange={handleChange}
+              value={form.names}
+              rows={2}
+              className={textareaClass}
+            />
+          </Field>
+          <Field label="Narrative Report">
+            <textarea
+              name="narrativeReport"
+              placeholder="Describe what happened this month in your ministry..."
+              onChange={handleChange}
+              value={form.narrativeReport}
+              rows={4}
+              className={textareaClass}
+            />
+          </Field>
+          <Field label="Challenges">
+            <textarea
+              name="challenges"
+              placeholder="What challenges or difficulties did you encounter this month?"
+              onChange={handleChange}
+              value={form.challenges}
+              rows={3}
+              className={textareaClass}
+            />
+          </Field>
+          <Field label="Prayer Requests">
+            <textarea
+              name="prayerRequest"
+              placeholder="List your prayer requests here..."
+              onChange={handleChange}
+              value={form.prayerRequest}
+              rows={3}
+              className={textareaClass}
+            />
+          </Field>
+        </div>
+      </FormSection>
+
+      {/* ── SUBMIT ── */}
+      <div className="flex flex-col sm:flex-row gap-3 mt-6">
         <button
           type="button"
           onClick={() => navigate("/")}
-          className="cursor-pointer flex items-center gap-1 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-3 py-2 rounded-lg transition"
+          className="cursor-pointer flex-1 sm:flex-none px-6 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
         >
-          ← Back
+          Cancel
         </button>
-        <h2 className="text-xl sm:text-2xl font-semibold text-gray-800">
-          {isEditing ? "Edit Monthly Report" : "Create Monthly Report"}
-        </h2>
-      </div>
-
-      {/* BASIC INFO */}
-      <h3 className="section-title">Basic Information</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="month" className="text-sm font-medium text-gray-700">
-            Month
-          </label>
-          <input
-            id="month"
-            name="month"
-            placeholder="e.g. January"
-            onChange={handleMonthChange} // ✅ dedicated handler
-            value={form.month}
-            className="input"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label htmlFor="worker" className="text-sm font-medium text-gray-700">
-            Worker Name
-          </label>
-          <input
-            id="worker"
-            name="worker"
-            placeholder="e.g. Juan dela Cruz"
-            onChange={handleChange}
-            value={form.worker}
-            className="input"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor="areaAssignment"
-            className="text-sm font-medium text-gray-700"
-          >
-            Area Assignment
-          </label>
-          <input
-            id="areaAssignment"
-            name="areaAssignment"
-            placeholder="e.g. Metro Manila"
-            onChange={handleChange}
-            value={form.areaAssignment}
-            className="input"
-          />
-        </div>
-        <div className="flex flex-col gap-1">
-          <label
-            htmlFor="churchName"
-            className="text-sm font-medium text-gray-700"
-          >
-            Church Name
-          </label>
-          <input
-            id="churchName"
-            name="churchName"
-            placeholder="e.g. AMGC Church"
-            onChange={handleChange}
-            value={form.churchName}
-            className="input"
-          />
-        </div>
-      </div>
-
-      {/* WEEKLY ATTENDANCE */}
-      <h3 className="section-title">Weekly Attendance</h3>
-      <Section
-        title="Worship Service"
-        weeks={5}
-        category="worshipService"
-        handler={handleWeekChange}
-        values={form.worshipService}
-      />
-      <Section
-        title="Sunday School"
-        weeks={5}
-        category="sundaySchool"
-        handler={handleWeekChange}
-        values={form.sundaySchool}
-      />
-      <Section
-        title="Prayer Meeting"
-        weeks={5}
-        category="prayerMeeting"
-        handler={handleWeekChange}
-        values={form.prayerMeeting}
-      />
-      <Section
-        title="Bible Studies"
-        weeks={5}
-        category="bibleStudies"
-        handler={handleWeekChange}
-        values={form.bibleStudies}
-      />
-
-      {/* FELLOWSHIP */}
-      <h3 className="section-title">Fellowship</h3>
-      <Section
-        title="Men's Fellowship"
-        weeks={5}
-        category="mensFellowship"
-        handler={handleWeekChange}
-        values={form.mensFellowship}
-      />
-      <Section
-        title="Women's Fellowship"
-        weeks={5}
-        category="womensFellowship"
-        handler={handleWeekChange}
-        values={form.womensFellowship}
-      />
-      <Section
-        title="Youth Fellowship"
-        weeks={5}
-        category="youthFellowship"
-        handler={handleWeekChange}
-        values={form.youthFellowship}
-      />
-      <Section
-        title="Children Fellowship"
-        weeks={5}
-        category="childrenFellowship"
-        handler={handleWeekChange}
-        values={form.childrenFellowship}
-      />
-      <Section
-        title="Tithes & Offering (₱)"
-        weeks={5}
-        category="tithesOffering"
-        handler={handleWeekChange}
-        values={form.tithesOffering}
-      />
-
-      {/* WEEKLY MINISTRY */}
-      <h3 className="section-title">Weekly Ministry</h3>
-      <Section
-        title="Homes Visited"
-        weeks={5}
-        category="homeVisited"
-        handler={handleWeekChange}
-        values={form.homeVisited}
-      />
-      <Section
-        title="Bible Study Group Led"
-        weeks={5}
-        category="bibleStudyGroupLed"
-        handler={handleWeekChange}
-        values={form.bibleStudyGroupLed}
-      />
-      <Section
-        title="Sermon Preached"
-        weeks={5}
-        category="sermonPreached"
-        handler={handleWeekChange}
-        values={form.sermonPreached}
-      />
-      <Section
-        title="Person Newly Contacted"
-        weeks={5}
-        category="personNewlyContacted"
-        handler={handleWeekChange}
-        values={form.personNewlyContacted}
-      />
-      <Section
-        title="Person Followed Up"
-        weeks={5}
-        category="personFollowedUp"
-        handler={handleWeekChange}
-        values={form.personFollowedUp}
-      />
-      <Section
-        title="Person Evangelized"
-        weeks={5}
-        category="personEvangelized"
-        handler={handleWeekChange}
-        values={form.personEvangelized}
-      />
-
-      {/* MINISTRY ACTIVITIES */}
-      <h3 className="section-title">Ministry Activities</h3>
-      <Section
-        title="Outreach"
-        weeks={5}
-        category="outreach"
-        handler={handleWeekChange}
-        values={form.outreach}
-      />
-      <Section
-        title="Training"
-        weeks={5}
-        category="training"
-        handler={handleWeekChange}
-        values={form.training}
-      />
-      <Section
-        title="Leadership"
-        weeks={5}
-        category="leadership"
-        handler={handleWeekChange}
-        values={form.leadership}
-      />
-      <Section
-        title="Baptism"
-        weeks={5}
-        category="baptism"
-        handler={handleWeekChange}
-        values={form.baptism}
-      />
-      <Section
-        title="Other"
-        weeks={5}
-        category="other"
-        handler={handleWeekChange}
-        values={form.other}
-      />
-      <Section
-        title="Family Day"
-        weeks={5}
-        category="familyDay"
-        handler={handleWeekChange}
-        values={form.familyDay}
-      />
-
-      {/* REPORT DETAILS */}
-      <h3 className="section-title">Report Details</h3>
-      <div className="flex flex-col gap-1 mb-4">
-        <label htmlFor="names" className="text-sm font-medium text-gray-700">
-          Names of new believers / baptized
-        </label>
-        <textarea
-          id="names"
-          name="names"
-          placeholder="e.g. Juan dela Cruz, Maria Santos"
-          onChange={handleChange}
-          value={form.names}
-          className="textarea"
-        />
-      </div>
-      <div className="flex flex-col gap-1 mb-4">
-        <label
-          htmlFor="narrativeReport"
-          className="text-sm font-medium text-gray-700"
+        <button
+          type="submit"
+          disabled={loading}
+          className="cursor-pointer flex-1 sm:flex-none flex items-center justify-center gap-2 px-8 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition disabled:opacity-50"
         >
-          Narrative Report
-        </label>
-        <textarea
-          id="narrativeReport"
-          name="narrativeReport"
-          placeholder="Describe what happened this month in your ministry..."
-          onChange={handleChange}
-          value={form.narrativeReport}
-          className="textarea"
-        />
+          {loading ? (
+            <>
+              <Spinner className="h-4 w-4 text-white" />
+              {isEditing ? "Updating..." : "Submitting..."}
+            </>
+          ) : isEditing ? (
+            "Update Report"
+          ) : (
+            "Submit Report"
+          )}
+        </button>
       </div>
-      <div className="flex flex-col gap-1 mb-4">
-        <label
-          htmlFor="challenges"
-          className="text-sm font-medium text-gray-700"
-        >
-          Challenges
-        </label>
-        <textarea
-          id="challenges"
-          name="challenges"
-          placeholder="What challenges or difficulties did you encounter this month?"
-          onChange={handleChange}
-          value={form.challenges}
-          className="textarea"
-        />
-      </div>
-      <div className="flex flex-col gap-1 mb-4">
-        <label
-          htmlFor="prayerRequest"
-          className="text-sm font-medium text-gray-700"
-        >
-          Prayer Requests
-        </label>
-        <textarea
-          id="prayerRequest"
-          name="prayerRequest"
-          placeholder="List your prayer requests here..."
-          onChange={handleChange}
-          value={form.prayerRequest}
-          className="textarea"
-        />
-      </div>
-
-      {/* SUBMIT BUTTON */}
-      <button
-        className="cursor-pointer submit-btn w-full sm:w-auto flex items-center justify-center gap-2 disabled:opacity-50"
-        disabled={loading}
-      >
-        {loading ? (
-          <>
-            <Spinner className="h-4 w-4 text-white" />
-            {isEditing ? "Updating..." : "Submitting..."}
-          </>
-        ) : isEditing ? (
-          "Update Report"
-        ) : (
-          "Submit Report"
-        )}
-      </button>
     </form>
-  );
-}
-
-// Section Component — 3 cols on mobile, 5 cols on desktop
-function Section({ title, weeks, category, handler, values = {} }) {
-  return (
-    <>
-      <p className="text-sm font-medium text-gray-600 mb-2">{title}</p>
-      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 mb-5">
-        {Array.from({ length: weeks }, (_, i) => i + 1).map((w) => (
-          <input
-            key={w}
-            type="number"
-            min="0"
-            placeholder={`Wk ${w}`}
-            className="input text-sm"
-            value={values[`week${w}`] ?? ""}
-            onChange={(e) => handler(category, `week${w}`, e.target.value)}
-          />
-        ))}
-      </div>
-    </>
   );
 }
