@@ -1,4 +1,4 @@
-// ReportList.jsx
+// /src/components/ReportList.jsx
 import { FaEdit, FaTrash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
@@ -35,33 +35,39 @@ export default function ReportList({ reports, onDelete }) {
     }
   };
 
-  const canModify = (report) => {
-    return user?.role === "admin" || report.createdBy === user?.id;
-  };
+  const canModify = (report) =>
+    user?.role === "admin" || report.createdBy === user?.id;
 
   if (!reports || reports.length === 0) {
-    return <p className="text-gray-500 mt-6">No reports found</p>;
+    return (
+      <div className="flex flex-col items-center justify-center h-40 text-gray-400 text-center px-4">
+        <p className="text-base font-medium">No reports found</p>
+        <p className="text-sm">Try adjusting the filters above.</p>
+      </div>
+    );
   }
 
   return (
     <>
-      {/* CARD LAYOUT — mobile only */}
+      {/* ── MOBILE CARDS ── */}
       <div className="flex flex-col gap-3 sm:hidden">
         {reports.map((r) => (
           <div
             key={r._id}
-            className="bg-white shadow rounded-xl p-4 border border-gray-100"
+            className="bg-white shadow-sm rounded-xl p-4 border border-gray-100"
           >
-            <div className="flex justify-between items-start mb-2">
-              <div>
-                <p className="font-semibold text-gray-800">{r.worker}</p>
-                <p className="text-sm text-gray-500">
+            <div className="flex justify-between items-start gap-2 mb-2">
+              <div className="min-w-0">
+                <p className="font-semibold text-gray-800 truncate">
+                  {r.worker}
+                </p>
+                <p className="text-xs text-gray-400 mt-0.5">
                   {r.month} {r.year}
                 </p>
               </div>
               <span
-                className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                  r.completed === true
+                className={`shrink-0 px-2 py-1 rounded-full text-[10px] font-semibold ${
+                  r.completed
                     ? "bg-green-100 text-green-700"
                     : "bg-red-100 text-red-700"
                 }`}
@@ -69,30 +75,32 @@ export default function ReportList({ reports, onDelete }) {
                 {r.completed ? "Approved" : "For Review"}
               </span>
             </div>
-
-            <p className="text-sm text-gray-600 mb-1">📍 {r.areaAssignment}</p>
-            <p className="text-sm text-gray-600 mb-3">⛪ {r.churchName}</p>
-
+            <p className="text-xs text-gray-500 mb-0.5 truncate">
+              📍 {r.areaAssignment}
+            </p>
+            <p className="text-xs text-gray-500 mb-3 truncate">
+              ⛪ {r.churchName}
+            </p>
             {canModify(r) && (
-              <div className="flex gap-3 justify-end">
+              <div className="flex gap-2 justify-end">
                 <button
                   onClick={() => handleEdit(r._id)}
                   disabled={editingId === r._id}
-                  className="cursor-pointer flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  className="cursor-pointer flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 disabled:opacity-50 transition"
                 >
                   {editingId === r._id ? (
-                    <Spinner className="h-4 w-4" />
+                    <Spinner className="h-3 w-3" />
                   ) : (
-                    <FaEdit />
+                    <FaEdit className="h-3 w-3" />
                   )}
                   Edit
                 </button>
                 <button
                   onClick={() => setConfirmId(r._id)}
                   disabled={deleting}
-                  className="cursor-pointer flex items-center gap-1 text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
+                  className="cursor-pointer flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-50 transition"
                 >
-                  <FaTrash />
+                  <FaTrash className="h-3 w-3" />
                   Delete
                 </button>
               </div>
@@ -101,32 +109,49 @@ export default function ReportList({ reports, onDelete }) {
         ))}
       </div>
 
-      {/* TABLE LAYOUT — desktop only */}
-      <div className="hidden sm:block bg-white shadow rounded-lg overflow-x-auto">
-        <table className="w-full text-left">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-3">WORKER</th>
-              <th className="p-3">MONTH</th>
-              <th className="p-3">YEAR</th>
-              <th className="p-3">AREA OF ASSIGNMENT</th>
-              <th className="p-3">CHURCH</th>
-              <th className="p-3">STATUS</th>
-              <th className="p-3">ACTIONS</th>
+      {/* ── DESKTOP TABLE — same style as AdminPanel ── */}
+      <div className="hidden sm:block bg-white shadow-sm rounded-xl border border-gray-100 overflow-x-auto">
+        <table className="w-full text-left text-sm">
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              {[
+                "Worker",
+                "Month",
+                "Year",
+                "Area of Assignment",
+                "Church",
+                "Status",
+                "Actions",
+              ].map((h) => (
+                <th
+                  key={h}
+                  className="px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap"
+                >
+                  {h}
+                </th>
+              ))}
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-100">
             {reports.map((r) => (
-              <tr key={r._id} className="border-b hover:bg-gray-50">
-                <td className="p-3">{r.worker}</td>
-                <td className="p-3">{r.month}</td>
-                <td className="p-3">{r.year}</td>
-                <td className="p-3">{r.areaAssignment}</td>
-                <td className="p-3">{r.churchName}</td>
-                <td className="p-3">
+              <tr key={r._id} className="hover:bg-gray-50 transition">
+                <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">
+                  {r.worker}
+                </td>
+                <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                  {r.month}
+                </td>
+                <td className="px-4 py-3 text-gray-600">{r.year}</td>
+                <td className="px-4 py-3 text-gray-600 max-w-[180px] truncate">
+                  {r.areaAssignment}
+                </td>
+                <td className="px-4 py-3 text-gray-600 max-w-[160px] truncate">
+                  {r.churchName}
+                </td>
+                <td className="px-4 py-3">
                   <span
-                    className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                      r.completed === true
+                    className={`px-2 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                      r.completed
                         ? "bg-green-100 text-green-700"
                         : "bg-red-100 text-red-700"
                     }`}
@@ -134,28 +159,30 @@ export default function ReportList({ reports, onDelete }) {
                     {r.completed ? "Approved" : "For Review"}
                   </span>
                 </td>
-                <td className="p-3 flex gap-4 items-center min-h-[48px]">
+                <td className="px-4 py-3">
                   {canModify(r) ? (
-                    <>
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={() => handleEdit(r._id)}
                         disabled={editingId === r._id}
-                        className="cursor-pointer text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                        title="Edit"
+                        className="cursor-pointer p-1.5 rounded-lg text-blue-500 hover:text-blue-700 hover:bg-blue-50 disabled:opacity-50 transition"
                       >
                         {editingId === r._id ? (
-                          <Spinner className="h-4 w-4 text-blue-600" />
+                          <Spinner className="h-3.5 w-3.5 text-blue-600" />
                         ) : (
-                          <FaEdit />
+                          <FaEdit className="h-3.5 w-3.5" />
                         )}
                       </button>
                       <button
                         onClick={() => setConfirmId(r._id)}
                         disabled={deleting}
-                        className="cursor-pointer text-red-600 hover:text-red-800 disabled:opacity-50"
+                        title="Delete"
+                        className="cursor-pointer p-1.5 rounded-lg text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-50 transition"
                       >
-                        <FaTrash />
+                        <FaTrash className="h-3.5 w-3.5" />
                       </button>
-                    </>
+                    </div>
                   ) : (
                     <span className="text-xs text-gray-400">—</span>
                   )}

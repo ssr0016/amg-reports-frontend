@@ -1,4 +1,4 @@
-// FilterBar.jsx
+// /src/components/FilterBar.jsx
 import { FaTimes, FaChevronDown } from "react-icons/fa";
 
 const MONTHS = [
@@ -20,7 +20,6 @@ const currentYear = new Date().getFullYear();
 const YEARS = [currentYear, currentYear - 1, currentYear - 2];
 
 export default function FilterBar({ filters, setFilters }) {
-  // ✅ hasFilters — month at year hindi kasama kasi laging may value sila
   const hasFilters =
     filters.worker !== "" || filters.area !== "" || filters.church !== "";
 
@@ -28,7 +27,6 @@ export default function FilterBar({ filters, setFilters }) {
     setFilters({ ...filters, [e.target.name]: e.target.value });
   };
 
-  // ✅ clear — month lang ang na-clear, year stays sa current year
   const clearFilters = () => {
     setFilters({
       month: "",
@@ -40,40 +38,42 @@ export default function FilterBar({ filters, setFilters }) {
   };
 
   return (
-    <div className="mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-700">Search Filters</h2>
-
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 mb-5">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          Search Filters
+        </p>
         <div
           className={`transition-all duration-200 ${
             hasFilters
-              ? "opacity-100 translate-y-0 pointer-events-auto"
-              : "opacity-0 -translate-y-1 pointer-events-none"
+              ? "opacity-100 pointer-events-auto"
+              : "opacity-0 pointer-events-none"
           }`}
         >
           <button
             onClick={clearFilters}
-            className="cursor-pointer flex items-center gap-1.5 text-sm font-medium text-red-500 bg-red-50 hover:bg-red-100 border border-red-200 px-3 py-1.5 rounded-lg transition"
+            className="cursor-pointer flex items-center gap-1.5 text-xs font-medium text-red-500 bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1.5 rounded-lg transition"
           >
-            <FaTimes className="h-3 w-3" />
+            <FaTimes className="h-2.5 w-2.5" />
             Clear filters
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {/* ✅ Month dropdown */}
+      {/* Filters grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {/* Month */}
         <div className="flex flex-col gap-1">
-          <label htmlFor="month" className="text-sm font-medium text-gray-600">
+          <label className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Month
           </label>
           <div className="relative">
             <select
-              id="month"
               name="month"
               value={filters.month}
               onChange={handleChange}
-              className="cursor-pointer appearance-none w-full bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-sm rounded-lg pl-3 pr-8 py-2 outline-none transition shadow-sm text-gray-800"
+              className="cursor-pointer appearance-none w-full bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 text-sm font-medium rounded-lg pl-3 pr-8 py-2 transition outline-none shadow-sm"
             >
               <option value="">All Months</option>
               {MONTHS.map((m) => (
@@ -86,18 +86,17 @@ export default function FilterBar({ filters, setFilters }) {
           </div>
         </div>
 
-        {/* ✅ Year dropdown — laging may selected, default current year */}
+        {/* Year */}
         <div className="flex flex-col gap-1">
-          <label htmlFor="year" className="text-sm font-medium text-gray-600">
+          <label className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Year
           </label>
           <div className="relative">
             <select
-              id="year"
               name="year"
               value={filters.year}
               onChange={handleChange}
-              className="cursor-pointer appearance-none w-full bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-sm rounded-lg pl-3 pr-8 py-2 outline-none transition shadow-sm text-gray-800"
+              className="cursor-pointer appearance-none w-full bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 text-sm font-medium rounded-lg pl-3 pr-8 py-2 transition outline-none shadow-sm"
             >
               {YEARS.map((y) => (
                 <option key={y} value={y}>
@@ -109,45 +108,45 @@ export default function FilterBar({ filters, setFilters }) {
           </div>
         </div>
 
+        {/* Worker */}
         <div className="flex flex-col gap-1">
-          <label htmlFor="worker" className="text-sm font-medium text-gray-600">
+          <label className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">
             Worker
           </label>
           <input
-            id="worker"
             name="worker"
             placeholder="e.g. Juan Dela Cruz"
             value={filters.worker}
             onChange={handleChange}
-            className="input"
+            className="w-full bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 text-sm rounded-lg px-3 py-2 transition outline-none shadow-sm placeholder:text-gray-400"
           />
         </div>
 
+        {/* Area */}
         <div className="flex flex-col gap-1">
-          <label htmlFor="area" className="text-sm font-medium text-gray-600">
-            Area of Assignment
+          <label className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            Area
           </label>
           <input
-            id="area"
             name="area"
             placeholder="e.g. Metro Manila"
             value={filters.area}
             onChange={handleChange}
-            className="input"
+            className="w-full bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 text-sm rounded-lg px-3 py-2 transition outline-none shadow-sm placeholder:text-gray-400"
           />
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="church" className="text-sm font-medium text-gray-600">
-            Church Name
+        {/* Church */}
+        <div className="flex flex-col gap-1 col-span-2 sm:col-span-1">
+          <label className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">
+            Church
           </label>
           <input
-            id="church"
             name="church"
             placeholder="e.g. AMGC Church"
             value={filters.church}
             onChange={handleChange}
-            className="input"
+            className="w-full bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 text-sm rounded-lg px-3 py-2 transition outline-none shadow-sm placeholder:text-gray-400"
           />
         </div>
       </div>
