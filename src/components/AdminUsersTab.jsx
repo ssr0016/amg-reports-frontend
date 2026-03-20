@@ -17,13 +17,8 @@ export default function AdminUsersTab({
   onDeleteUser,
   currentUserId,
 }) {
-  const [loadingPage, setLoadingPage] = useState(false);
-
-  const handlePageChange = (newPage) => {
-    setLoadingPage(true);
-    setUserPage(newPage);
-    setTimeout(() => setLoadingPage(false), 300);
-  };
+  // ✅ Walang loadingPage — ang loading prop na galing sa AdminPanel ang gagamitin
+  // Kasi backend pagination na ang Users, totoong API call ang bawat page change
   return (
     <>
       {/* ── TOOLBAR ── */}
@@ -48,11 +43,6 @@ export default function AdminUsersTab({
       ) : paginatedUsers.length === 0 ? (
         <div className="flex flex-col items-center justify-center h-40 text-gray-400">
           <p className="text-base font-medium">No users found</p>
-        </div>
-      ) : loadingPage ? (
-        // ✅ Spinner kapag nag-page change
-        <div className="flex justify-center items-center h-40">
-          <Spinner className="h-10 w-10 text-blue-600" />
         </div>
       ) : (
         <>
@@ -182,7 +172,7 @@ export default function AdminUsersTab({
           <Pagination
             currentPage={userPage}
             totalPages={totalUserPages}
-            setPage={handlePageChange}
+            setPage={setUserPage}
           />
         </>
       )}
