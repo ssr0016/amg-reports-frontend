@@ -1,3 +1,4 @@
+// /src/components/Pagination.jsx
 export default function Pagination({ currentPage, totalPages, setPage }) {
   if (totalPages <= 1) return null;
 
@@ -21,7 +22,7 @@ export default function Pagination({ currentPage, totalPages, setPage }) {
   return (
     <div className="flex justify-end items-center gap-1 sm:gap-2 mt-6 flex-wrap">
       <button
-        onClick={() => setPage((p) => Math.max(p - 1, 1))}
+        onClick={() => setPage(Math.max(currentPage - 1, 1))} // ✅ direct number
         disabled={currentPage === 1}
         className="cursor-pointer px-2 sm:px-3 py-1 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-40"
       >
@@ -36,7 +37,7 @@ export default function Pagination({ currentPage, totalPages, setPage }) {
         ) : (
           <button
             key={page}
-            onClick={() => setPage(page)}
+            onClick={() => setPage(page)} // ✅ direct number
             className={`cursor-pointer px-2 sm:px-3 py-1 rounded-lg text-sm border ${
               currentPage === page
                 ? "bg-blue-600 text-white border-blue-600"
@@ -49,7 +50,7 @@ export default function Pagination({ currentPage, totalPages, setPage }) {
       )}
 
       <button
-        onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+        onClick={() => setPage(Math.min(currentPage + 1, totalPages))} // ✅ direct number
         disabled={currentPage === totalPages}
         className="cursor-pointer px-2 sm:px-3 py-1 rounded-lg border border-gray-300 text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-40"
       >

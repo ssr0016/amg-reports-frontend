@@ -41,11 +41,32 @@ export default function AdminPanel() {
 
   // ── Reports state ────────────────────────────────────────────────────────────
   const [reports, setReports] = useState([]);
-  const [totalReportCount, setTotalReportCount] = useState(0); // ✅ from backend
-  const [totalReportPages, setTotalReportPages] = useState(1); // ✅ from backend
+  const [totalReportCount, setTotalReportCount] = useState(0);
+  const [totalReportPages, setTotalReportPages] = useState(1);
   const [loadingReports, setLoadingReports] = useState(true);
   const [togglingId, setTogglingId] = useState(null);
-  const [reportPage, setReportPage] = useState(1);
+  const [reportPage, setReportPage] = useState(() => {
+    const p = parseInt(
+      new URLSearchParams(window.location.search).get("rpage"),
+    );
+    return p > 0 ? p : 1;
+  });
+
+  // ── Tracker page state ───────────────────────────────────────────────────────
+  const [trackerPage, setTrackerPage] = useState(() => {
+    const p = parseInt(
+      new URLSearchParams(window.location.search).get("tpage"),
+    );
+    return p > 0 ? p : 1;
+  });
+
+  // ── Logs page state ──────────────────────────────────────────────────────────
+  const [logsPage, setLogsPage] = useState(() => {
+    const p = parseInt(
+      new URLSearchParams(window.location.search).get("lpage"),
+    );
+    return p > 0 ? p : 1;
+  });
 
   // ── Users state ──────────────────────────────────────────────────────────────
   const [users, setUsers] = useState([]);
@@ -53,8 +74,13 @@ export default function AdminPanel() {
   const [totalUserCount, setTotalUserCount] = useState(0);
   const [totalUserPages, setTotalUserPages] = useState(1);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  const [userPage, setUserPage] = useState(1);
-  const [userStatusFilter, setUserStatusFilter] = useState("all"); // ✅ new
+  const [userPage, setUserPage] = useState(() => {
+    const p = parseInt(
+      new URLSearchParams(window.location.search).get("upage"),
+    );
+    return p > 0 ? p : 1;
+  });
+  const [userStatusFilter, setUserStatusFilter] = useState("all");
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null);
   const [deletingUser, setDeletingUser] = useState(false);
 
@@ -74,7 +100,61 @@ export default function AdminPanel() {
   const [showUserForm, setShowUserForm] = useState(false);
   const [showUserPassword, setShowUserPassword] = useState(false);
 
-  const [activeTab, setActiveTab] = useState("reports");
+  const [activeTab, setActiveTab] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    return ["reports", "tracker", "users", "logs"].includes(tab)
+      ? tab
+      : "reports";
+  });
+
+  // ✅ Helper — i-update ang URL params
+  const updateURL = (updates) => {
+    const url = new URL(window.location);
+    Object.entries(updates).forEach(([k, v]) => url.searchParams.set(k, v));
+    window.history.pushState({}, "", url);
+  };
+
+  const handleTrackerPageChange = (page) => {
+    setTrackerPage(page);
+    updateURL({ tpage: page });
+  };
+
+  const handleLogsPageChange = (page) => {
+    setLogsPage(page);
+    updateURL({ lpage: page });
+  };
+
+  const handleTabChange = (key) => {
+    setActiveTab(key);
+    updateURL({ tab: key });
+    // ✅ Hindi na nire-reset ang page — pinapanatili ang existing page sa URL
+    if (key === "tracker") {
+      setLoadingTracker(true);
+      fetchAllReportsForTracker();
+    }
+    if (key === "users") {
+      setLoadingUsers(true);
+      fetchUsers();
+    }
+    if (key === "reports") {
+      setLoadingReports(true);
+      fetchReports();
+    }
+  };
+
+  // ✅ Page change handlers na nag-u-update ng URL
+  const handleReportPageChange = (page) => {
+    setLoadingReports(true);
+    setReportPage(page);
+    updateURL({ rpage: page });
+  };
+
+  const handleUserPageChange = (page) => {
+    setLoadingUsers(true);
+    setUserPage(page);
+    updateURL({ upage: page });
+  };
 
   const currentYear = new Date().getFullYear();
   const prevMonthIndex = new Date().getMonth() - 1;
@@ -192,18 +272,15 @@ export default function AdminPanel() {
   }, [fetchAllReportsForTracker]);
   useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]); // ✅ re-fetch kapag nagbago ang userPage
+  }, [fetchUsers]);
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
   useEffect(() => {
     setUserPage(1);
-  }, [userStatusFilter]); // ✅ reset page on filter change
-
-  // ✅ Reset sa page 1 kapag nagbago ang month o year
-  useEffect(() => {
-    setReportPage(1);
-  }, [bulkMonth, bulkYear]);
+    updateURL({ upage: 1 });
+  }, [userStatusFilter]);
+  // ✅ Removed: setReportPage(1) on bulkMonth/bulkYear — now handled in setBulkMonth/setBulkYear directly
 
   const toggleComplete = async (id) => {
     try {
@@ -356,25 +433,6 @@ export default function AdminPanel() {
     { key: "logs", label: "🕵️ Logs" },
   ];
 
-  const handleTabChange = (key) => {
-    setActiveTab(key);
-    // ✅ I-set agad ang loading bago mag-fetch para makita ang spinner
-    if (key === "tracker") {
-      setLoadingTracker(true);
-      fetchAllReportsForTracker();
-    }
-    if (key === "users") {
-      setLoadingUsers(true);
-      fetchUsers();
-      setUserPage(1);
-    }
-    if (key === "reports") {
-      setLoadingReports(true);
-      fetchReports();
-      setReportPage(1);
-    }
-  };
-
   return (
     <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
       {/* ── HEADER ── */}
@@ -484,19 +542,27 @@ export default function AdminPanel() {
       {/* ── TAB CONTENT ── */}
       {activeTab === "reports" && (
         <AdminReportsTab
-          reports={reports} // ✅ 10 per page na lang
-          paginatedReports={reports} // ✅ na-paginate na sa backend
-          totalReportPages={totalReportPages} // ✅ from backend
-          totalReportCount={totalReportCount} // ✅ total count
+          reports={reports}
+          paginatedReports={reports}
+          totalReportPages={totalReportPages}
+          totalReportCount={totalReportCount}
           reportPage={reportPage}
-          setReportPage={setReportPage}
+          setReportPage={handleReportPageChange}
           loading={loadingReports}
           togglingId={togglingId}
           onToggleComplete={toggleComplete}
           bulkMonth={bulkMonth}
-          setBulkMonth={setBulkMonth}
+          setBulkMonth={(val) => {
+            setBulkMonth(val);
+            setReportPage(1);
+            updateURL({ rpage: 1 });
+          }}
           bulkYear={bulkYear}
-          setBulkYear={setBulkYear}
+          setBulkYear={(val) => {
+            setBulkYear(val);
+            setReportPage(1);
+            updateURL({ rpage: 1 });
+          }}
           onBulkDownload={handleBulkDownload}
         />
       )}
@@ -513,7 +579,9 @@ export default function AdminPanel() {
           approvedCount={approvedCount}
           workers={workers}
           years={years}
-          loading={loadingTracker} // ✅ sariling loading state ng tracker
+          loading={loadingTracker}
+          trackerPage={trackerPage}
+          onTrackerPageChange={handleTrackerPageChange}
         />
       )}
 
@@ -524,7 +592,7 @@ export default function AdminPanel() {
           totalUserPages={totalUserPages}
           totalUserCount={totalUserCount}
           userPage={userPage}
-          setUserPage={setUserPage}
+          setUserPage={handleUserPageChange}
           loading={loadingUsers}
           onCreateUser={openCreateUser}
           onEditUser={openEditUser}
@@ -534,11 +602,17 @@ export default function AdminPanel() {
           setStatusFilter={(val) => {
             setUserStatusFilter(val);
             setUserPage(1);
+            updateURL({ upage: 1 });
           }}
         />
       )}
 
-      {activeTab === "logs" && <AdminLogsTab />}
+      {activeTab === "logs" && (
+        <AdminLogsTab
+          logsPage={logsPage}
+          onLogsPageChange={handleLogsPageChange}
+        />
+      )}
 
       <UserFormModal
         show={showUserForm}

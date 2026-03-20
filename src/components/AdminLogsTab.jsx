@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import API from "../services/api";
 import Spinner from "./Spinner";
-import Pagination from "./Pagination"; // ✅ fixed — was wrongly importing Spinner
+import Pagination from "./Pagination";
 import { FaChevronDown } from "react-icons/fa";
 
 const ACTION_LABELS = {
@@ -60,13 +60,14 @@ function formatDate(dateStr) {
   });
 }
 
-export default function AdminLogsTab() {
+export default function AdminLogsTab({ logsPage, onLogsPageChange }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
   const [filterAction, setFilterAction] = useState("");
 
+  // ✅ Use external page from AdminPanel (URL-synced)
+  const page = logsPage || 1;
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
   const fetchLogs = useCallback(async () => {
@@ -87,17 +88,18 @@ export default function AdminLogsTab() {
   useEffect(() => {
     fetchLogs();
   }, [fetchLogs]);
-  useEffect(() => {
-    setPage(1);
-  }, [filterAction]);
+
+  // ✅ Reset to page 1 on filter change
+  const handleFilterChange = (e) => {
+    setFilterAction(e.target.value);
+    onLogsPageChange(1);
+  };
 
   return (
     <div>
       {/* ── TOOLBAR ── */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
         <p className="text-sm text-gray-500">{total} total logs</p>
-
-        {/* ✅ Filter dropdown — same style as Month/Year dropdowns */}
         <div className="flex flex-row gap-2 items-end justify-end">
           <div className="flex flex-col gap-1">
             <label className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">
@@ -106,7 +108,7 @@ export default function AdminLogsTab() {
             <div className="relative">
               <select
                 value={filterAction}
-                onChange={(e) => setFilterAction(e.target.value)}
+                onChange={handleFilterChange}
                 className="cursor-pointer appearance-none bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 text-sm font-medium rounded-lg pl-3 pr-8 py-2 transition outline-none shadow-sm w-[190px] sm:w-[210px]"
               >
                 <option value="">All Actions</option>
@@ -260,11 +262,11 @@ export default function AdminLogsTab() {
             </table>
           </div>
 
-          {/* ✅ Same Pagination component as Reports and Users */}
+          {/* ✅ Uses external page handler — URL-synced */}
           <Pagination
             currentPage={page}
             totalPages={totalPages}
-            setPage={setPage}
+            setPage={onLogsPageChange}
           />
         </>
       )}

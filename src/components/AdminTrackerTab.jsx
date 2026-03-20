@@ -26,12 +26,21 @@ export default function AdminTrackerTab({
   approvedCount,
   workers,
   years,
-  loading, // ✅ new prop
+  loading,
+  trackerPage, // ✅ from parent
+  onTrackerPageChange, // ✅ from parent
 }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
   const [loadingPage, setLoadingPage] = useState(false);
+
+  // ✅ Use external page — hindi na local state
+  const page = trackerPage || 1;
+  const setPage = (p) => {
+    setLoadingPage(true);
+    onTrackerPageChange(p);
+    setTimeout(() => setLoadingPage(false), 300);
+  };
 
   const filtered = useMemo(() => {
     return trackerData.filter(({ worker: w, submitted, approved }) => {
@@ -69,11 +78,11 @@ export default function AdminTrackerTab({
 
   const handleMonthChange = (e) => {
     setTrackerMonth(e.target.value);
-    setPage(1);
+    onTrackerPageChange(1);
   };
   const handleYearChange = (e) => {
     setTrackerYear(Number(e.target.value));
-    setPage(1);
+    onTrackerPageChange(1);
   };
 
   // ✅ Brief spinner kapag nag-page change
