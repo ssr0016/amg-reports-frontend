@@ -37,7 +37,6 @@ const MONTHS_DISPLAY = [
   "December",
 ];
 const currentYear = new Date().getFullYear();
-const YEARS = [currentYear - 1, currentYear - 2, currentYear - 3];
 
 function parseMonthFromInput(input) {
   const lower = input.trim().toLowerCase();
@@ -113,58 +112,98 @@ const selectClass =
 const textareaClass =
   "w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-800 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition bg-white placeholder:text-gray-400 resize-none";
 
+const defaultForm = {
+  month: "",
+  year: currentYear - 1,
+  worker: "",
+  areaAssignment: "",
+  churchName: "",
+  worshipService: { ...defaultWeeks5 },
+  sundaySchool: { ...defaultWeeks5 },
+  prayerMeeting: { ...defaultWeeks5 },
+  bibleStudies: { ...defaultWeeks5 },
+  tithesOffering: { ...defaultWeeks5 },
+  homeVisited: { ...defaultWeeks5 },
+  bibleStudyGroupLed: { ...defaultWeeks5 },
+  sermonPreached: { ...defaultWeeks5 },
+  personNewlyContacted: { ...defaultWeeks5 },
+  personFollowedUp: { ...defaultWeeks5 },
+  personEvangelized: { ...defaultWeeks5 },
+  mensFellowship: { ...defaultWeeks5 },
+  womensFellowship: { ...defaultWeeks5 },
+  youthFellowship: { ...defaultWeeks5 },
+  childrenFellowship: { ...defaultWeeks5 },
+  outreach: { ...defaultWeeks5 },
+  training: { ...defaultWeeks5 },
+  leadership: { ...defaultWeeks5 },
+  baptism: { ...defaultWeeks5 },
+  other: { ...defaultWeeks5 },
+  familyDay: { ...defaultWeeks5 },
+  names: "",
+  narrativeReport: "",
+  challenges: "",
+  prayerRequest: "",
+};
+
 // ── Main Form ─────────────────────────────────────────────────────────────────
 export default function ReportForm({ reportId }) {
   const navigate = useNavigate();
   const isEditing = !!reportId;
 
-  const [form, setForm] = useState({
-    month: "",
-    year: currentYear - 1,
-    worker: "",
-    areaAssignment: "",
-    churchName: "",
-    worshipService: { ...defaultWeeks5 },
-    sundaySchool: { ...defaultWeeks5 },
-    prayerMeeting: { ...defaultWeeks5 },
-    bibleStudies: { ...defaultWeeks5 },
-    tithesOffering: { ...defaultWeeks5 },
-    homeVisited: { ...defaultWeeks5 },
-    bibleStudyGroupLed: { ...defaultWeeks5 },
-    sermonPreached: { ...defaultWeeks5 },
-    personNewlyContacted: { ...defaultWeeks5 },
-    personFollowedUp: { ...defaultWeeks5 },
-    personEvangelized: { ...defaultWeeks5 },
-    mensFellowship: { ...defaultWeeks5 },
-    womensFellowship: { ...defaultWeeks5 },
-    youthFellowship: { ...defaultWeeks5 },
-    childrenFellowship: { ...defaultWeeks5 },
-    outreach: { ...defaultWeeks5 },
-    training: { ...defaultWeeks5 },
-    leadership: { ...defaultWeeks5 },
-    baptism: { ...defaultWeeks5 },
-    other: { ...defaultWeeks5 },
-    familyDay: { ...defaultWeeks5 },
-    names: "",
-    narrativeReport: "",
-    challenges: "",
-    prayerRequest: "",
+  // Unique localStorage key per mode — create vs edit
+  const storageKey = isEditing
+    ? `reportForm_edit_${reportId}`
+    : "reportForm_new";
+
+  // Lazy init: load from localStorage if available, otherwise use defaults
+  const [form, setForm] = useState(() => {
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { ...defaultForm };
   });
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(false);
+  // Guard flag: huwag mag-auto-save habang nag-fe-fetch pa (edit mode)
+  // Para hindi ma-overwrite ng empty form ang saved draft bago dumating ang API data
+  const [readyToSave, setReadyToSave] = useState(!isEditing);
 
+  // Auto-save to localStorage — only after fetch is done (or create mode agad)
+  useEffect(() => {
+    if (!readyToSave) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(form));
+    } catch {}
+  }, [form, storageKey, readyToSave]);
+
+  // Edit mode: fetch report from API
   useEffect(() => {
     if (isEditing) {
       const fetchReport = async () => {
         try {
           setFetching(true);
           const res = await API.get(`/reports/${reportId}`);
-          setForm(res.data.data);
+
+          // Kung may saved draft na sa localStorage, gamitin yun (retain ang edits)
+          // Kung wala pa, gamitin ang data mula sa API
+          const saved = localStorage.getItem(storageKey);
+          if (saved) {
+            try {
+              setForm(JSON.parse(saved));
+            } catch {
+              setForm(res.data.data);
+            }
+          } else {
+            setForm(res.data.data);
+          }
         } catch {
           toast.error("Failed to load report.");
         } finally {
           setFetching(false);
+          // Safe na mag-save ngayon — may data na ang form
+          setReadyToSave(true);
         }
       };
       fetchReport();
@@ -176,12 +215,8 @@ export default function ReportForm({ reportId }) {
     if (name === "month") {
       const now = new Date();
       const monthIndex = VALID_MONTHS.indexOf(value.toLowerCase());
-      // ✅ kung ang month ay previous month (strictly less than current), current year
-      // kung ang month ay current o future, current year din — para ma-block ng validation
       const autoYear =
-        monthIndex < now.getMonth()
-          ? now.getFullYear() // previous month this year e.g. February = 2026
-          : now.getFullYear(); // current/future month — same year, mabo-block ng validation
+        monthIndex < now.getMonth() ? now.getFullYear() : now.getFullYear();
       setForm({ ...form, month: value, year: autoYear });
     } else {
       setForm({ ...form, [name]: value });
@@ -190,6 +225,12 @@ export default function ReportForm({ reportId }) {
 
   const handleWeekChange = (category, week, value) => {
     setForm({ ...form, [category]: { ...form[category], [week]: value } });
+  };
+
+  const clearDraft = () => {
+    try {
+      localStorage.removeItem(storageKey);
+    } catch {}
   };
 
   const submit = async (e) => {
@@ -205,12 +246,11 @@ export default function ReportForm({ reportId }) {
       return toast.error("Please enter a valid month (e.g. February).");
 
     const now = new Date();
-    const currentMonthIndex = now.getMonth(); // 0-based
+    const currentMonthIndex = now.getMonth();
     const currentYear = now.getFullYear();
     const inputMonthIndex = VALID_MONTHS.indexOf(parsedMonth);
     const inputYear = parseInt(form.year);
 
-    // ✅ Block current month and future months
     const inputDate = new Date(inputYear, inputMonthIndex, 1);
     const currentDate = new Date(currentYear, currentMonthIndex, 1);
 
@@ -232,6 +272,8 @@ export default function ReportForm({ reportId }) {
         await API.post("/reports", form);
         toast.success("Report created successfully!");
       }
+      // Clear draft after successful submit
+      clearDraft();
       navigate("/");
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to submit report.");
@@ -306,7 +348,6 @@ export default function ReportForm({ reportId }) {
 
       {/* ── WEEKLY ATTENDANCE ── */}
       <FormSection title="Weekly Attendance" icon="🙏" defaultOpen={true}>
-        {/* Week headers */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-3">
           <div className="hidden sm:block w-44 shrink-0" />
           <div className="grid grid-cols-5 gap-1.5 flex-1">
@@ -549,7 +590,10 @@ export default function ReportForm({ reportId }) {
       <div className="flex flex-col sm:flex-row gap-3 mt-6">
         <button
           type="button"
-          onClick={() => navigate("/")}
+          onClick={() => {
+            clearDraft();
+            navigate("/");
+          }}
           className="cursor-pointer flex-1 sm:flex-none px-6 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
         >
           Cancel
