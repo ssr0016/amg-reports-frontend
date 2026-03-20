@@ -49,6 +49,9 @@ export default function AdminPanel() {
 
   // ── Users state ──────────────────────────────────────────────────────────────
   const [users, setUsers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]); // ✅ para sa Tracker — lahat ng users
+  const [totalUserCount, setTotalUserCount] = useState(0);
+  const [totalUserPages, setTotalUserPages] = useState(1);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [userPage, setUserPage] = useState(1);
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null);
@@ -135,24 +138,63 @@ export default function AdminPanel() {
     }
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       setLoadingUsers(true);
-      const res = await API.get("/auth/users");
+      // Paginated — para sa Users tab display
+      const res = await API.get("/auth/users", {
+        params: { page: userPage, limit: 10 },
+      });
       setUsers(res.data.data);
+      setTotalUserCount(res.data.total);
+      setTotalUserPages(res.data.pages);
+
+      // ✅ All users — para sa Tracker (walang pagination)
+      const allRes = await API.get("/auth/users", {
+        params: { page: 1, limit: 9999 },
+      });
+      setAllUsers(allRes.data.data);
     } catch {
       toast.error("Failed to fetch users.");
     } finally {
       setLoadingUsers(false);
     }
-  };
+  }, [userPage]);
+
+  // ── Fetch #3: All reports for tracker (separate — hindi affected ng pagination) ──
+  const [allReports, setAllReports] = useState([]);
+  const [loadingTracker, setLoadingTracker] = useState(true); // ✅ sariling loading state
+
+  const fetchAllReportsForTracker = useCallback(async () => {
+    try {
+      setLoadingTracker(true);
+      const res = await API.get("/reports", {
+        params: {
+          month: trackerMonth,
+          year: trackerYear,
+          limit: 9999,
+        },
+      });
+      setAllReports(res.data.data);
+    } catch {
+      // silent fail
+    } finally {
+      setLoadingTracker(false);
+    }
+  }, [trackerMonth, trackerYear]);
 
   useEffect(() => {
+    fetchAllReportsForTracker();
+  }, [fetchAllReportsForTracker]);
+  useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]); // ✅ re-fetch kapag nagbago ang userPage
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
+  useEffect(() => {
+    setUserPage(1);
+  }, []); // ✅ reset on mount only
 
   // ✅ Reset sa page 1 kapag nagbago ang month o year
   useEffect(() => {
@@ -257,8 +299,9 @@ export default function AdminPanel() {
   // ── Derived values ───────────────────────────────────────────────────────────
   const prevMonthLabel = getPreviousMonthLabel();
   const prevMonth = getPrevMonth();
-  const totalUsers = users.filter((u) => u.role === "user").length;
-  const totalAdmins = users.filter((u) => u.role === "admin").length;
+  // ✅ allUsers — accurate count kahit paginated ang users tab
+  const totalUsers = allUsers.filter((u) => u.role === "user").length;
+  const totalAdmins = allUsers.filter((u) => u.role === "admin").length;
   const prevMonthReports = reports.filter((r) =>
     r.month?.toLowerCase().includes(prevMonth),
   ).length;
@@ -267,9 +310,10 @@ export default function AdminPanel() {
   ).length;
   const prevMonthPending = prevMonthReports - prevMonthApproved;
 
-  const workers = users.filter((u) => u.role === "user");
+  const workers = allUsers.filter((u) => u.role === "user"); // ✅ allUsers — lahat, hindi paginated
   const trackerData = workers.map((w) => {
-    const report = reports.find(
+    // ✅ allReports — hindi paginated, lahat ng reports para sa selected month/year
+    const report = allReports.find(
       (r) =>
         r.createdBy === w._id &&
         r.month?.toLowerCase() === trackerMonth.toLowerCase() &&
@@ -287,12 +331,8 @@ export default function AdminPanel() {
   const notSubmittedCount = trackerData.filter((d) => !d.submitted).length;
   const approvedCount = trackerData.filter((d) => d.approved).length;
 
-  // ✅ Users — frontend pagination (users ay kakaunti lang, okay na)
-  const totalUserPages = Math.ceil(users.length / USERS_PER_PAGE);
-  const paginatedUsers = users.slice(
-    (userPage - 1) * USERS_PER_PAGE,
-    userPage * USERS_PER_PAGE,
-  );
+  // ✅ Users — backend pagination na, hindi na kailangan ng slice
+  const paginatedUsers = users; // already paginated from backend
 
   const years = [currentYear, currentYear - 1, currentYear - 2];
 
@@ -302,6 +342,25 @@ export default function AdminPanel() {
     { key: "users", label: "Users" },
     { key: "logs", label: "🕵️ Logs" },
   ];
+
+  const handleTabChange = (key) => {
+    setActiveTab(key);
+    // ✅ I-set agad ang loading bago mag-fetch para makita ang spinner
+    if (key === "tracker") {
+      setLoadingTracker(true);
+      fetchAllReportsForTracker();
+    }
+    if (key === "users") {
+      setLoadingUsers(true);
+      fetchUsers();
+      setUserPage(1);
+    }
+    if (key === "reports") {
+      setLoadingReports(true);
+      fetchReports();
+      setReportPage(1);
+    }
+  };
 
   return (
     <div className="w-full max-w-7xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
@@ -397,7 +456,7 @@ export default function AdminPanel() {
         {TABS.map(({ key, label }) => (
           <button
             key={key}
-            onClick={() => setActiveTab(key)}
+            onClick={() => handleTabChange(key)}
             className={`cursor-pointer shrink-0 px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-medium border-b-2 transition whitespace-nowrap ${
               activeTab === key
                 ? "border-blue-600 text-blue-600"
@@ -441,6 +500,7 @@ export default function AdminPanel() {
           approvedCount={approvedCount}
           workers={workers}
           years={years}
+          loading={loadingTracker} // ✅ sariling loading state ng tracker
         />
       )}
 
@@ -449,6 +509,7 @@ export default function AdminPanel() {
           users={users}
           paginatedUsers={paginatedUsers}
           totalUserPages={totalUserPages}
+          totalUserCount={totalUserCount}
           userPage={userPage}
           setUserPage={setUserPage}
           loading={loadingUsers}
