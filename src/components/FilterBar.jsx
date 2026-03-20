@@ -19,7 +19,12 @@ const MONTHS = [
 const currentYear = new Date().getFullYear();
 const YEARS = [currentYear, currentYear - 1, currentYear - 2];
 
-export default function FilterBar({ filters, setFilters }) {
+export default function FilterBar({
+  filters,
+  setFilters,
+  defaultMonth,
+  defaultYear,
+}) {
   const hasFilters =
     filters.worker !== "" || filters.area !== "" || filters.church !== "";
 
@@ -27,10 +32,11 @@ export default function FilterBar({ filters, setFilters }) {
     setFilters({ ...filters, [e.target.name]: e.target.value });
   };
 
+  // ✅ Reset to default month/year — hindi sa blank
   const clearFilters = () => {
     setFilters({
-      month: "",
-      year: currentYear,
+      month: defaultMonth || "",
+      year: defaultYear || currentYear,
       worker: "",
       area: "",
       church: "",

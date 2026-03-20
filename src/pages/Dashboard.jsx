@@ -17,26 +17,64 @@ function getPrevMonthName() {
   return prev.toLocaleString("en-US", { month: "long" });
 }
 
+// ✅ Helper — read and write URL params
+const getParam = (key, fallback = "") => {
+  return new URLSearchParams(window.location.search).get(key) || fallback;
+};
+
+const updateURL = (updates) => {
+  const url = new URL(window.location);
+  Object.entries(updates).forEach(([k, v]) => {
+    if (v === "" || v === null || v === undefined) {
+      url.searchParams.delete(k);
+    } else {
+      url.searchParams.set(k, v);
+    }
+  });
+  window.history.pushState({}, "", url);
+};
+
 function Dashboard() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(1);
   const [totalReports, setTotalReports] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
   const currentYear = new Date().getFullYear();
   const prevMonthIndex = new Date().getMonth() - 1;
+  const defaultMonth = getPrevMonthName();
+  const defaultYear = prevMonthIndex < 0 ? currentYear - 1 : currentYear;
 
-  const [filters, setFilters] = useState({
-    month: getPrevMonthName(),
-    year: prevMonthIndex < 0 ? currentYear - 1 : currentYear,
-    worker: "",
-    area: "",
-    church: "",
+  // ✅ Read all filter values AND page from URL on mount
+  const [currentPage, setCurrentPage] = useState(() => {
+    const p = parseInt(getParam("page", "1"));
+    return p > 0 ? p : 1;
   });
+
+  const [filters, setFiltersState] = useState({
+    month: getParam("month", defaultMonth),
+    year: parseInt(getParam("year", String(defaultYear))),
+    worker: getParam("worker", ""),
+    area: getParam("area", ""),
+    church: getParam("church", ""),
+  });
+
+  // ✅ Wrapper — sync filters to URL
+  const setFilters = (newFilters) => {
+    setFiltersState(newFilters);
+    updateURL({
+      month: newFilters.month || "",
+      year: newFilters.year,
+      worker: newFilters.worker || "",
+      area: newFilters.area || "",
+      church: newFilters.church || "",
+      page: 1, // ✅ reset page on filter change
+    });
+    setCurrentPage(1);
+  };
 
   const debouncedFilters = useDebounce(filters, 300);
 
@@ -67,9 +105,6 @@ function Dashboard() {
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [debouncedFilters]);
 
   const handleLogout = async () => {
     await logout();
@@ -77,13 +112,13 @@ function Dashboard() {
     navigate("/login");
   };
 
-  // ✅ After delete — re-fetch with spinner (fetchReports already sets loading=true)
   const handleDelete = () => fetchReports();
 
-  // ✅ Page change — loading=true is handled inside fetchReports via useCallback
+  // ✅ Page change — sync to URL
   const handlePageChange = (page) => {
-    setLoading(true); // ✅ show spinner immediately on page click
+    setLoading(true);
     setCurrentPage(page);
+    updateURL({ page });
   };
 
   const showingFrom =
@@ -137,13 +172,17 @@ function Dashboard() {
         </div>
       </div>
 
-      <FilterBar filters={filters} setFilters={setFilters} />
+      <FilterBar
+        filters={filters}
+        setFilters={setFilters}
+        defaultMonth={defaultMonth}
+        defaultYear={defaultYear}
+      />
 
       {/* ── LOADING ── */}
       {loading ? (
         <div className="flex justify-center items-center h-40">
-          <Spinner className="h-10 w-10 text-blue-600" />{" "}
-          {/* ✅ same Spinner component */}
+          <Spinner className="h-10 w-10 text-blue-600" />
         </div>
       ) : (
         <>
@@ -155,7 +194,6 @@ function Dashboard() {
 
           <ReportList reports={reports} onDelete={handleDelete} />
 
-          {/* ✅ handlePageChange — sets loading=true agad bago mag-fetch */}
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
