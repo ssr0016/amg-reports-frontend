@@ -60,13 +60,17 @@ function formatDate(dateStr) {
   });
 }
 
-export default function AdminLogsTab({ logsPage, onLogsPageChange }) {
+export default function AdminLogsTab({
+  logsPage,
+  onLogsPageChange,
+  initialFilter = "",
+  onFilterChange,
+}) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
-  const [filterAction, setFilterAction] = useState("");
+  const [filterAction, setFilterAction] = useState(initialFilter); // ✅ from URL
 
-  // ✅ Use external page from AdminPanel (URL-synced)
   const page = logsPage || 1;
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
@@ -89,10 +93,12 @@ export default function AdminLogsTab({ logsPage, onLogsPageChange }) {
     fetchLogs();
   }, [fetchLogs]);
 
-  // ✅ Reset to page 1 on filter change
+  // ✅ Sync filter to URL
   const handleFilterChange = (e) => {
-    setFilterAction(e.target.value);
+    const val = e.target.value;
+    setFilterAction(val);
     onLogsPageChange(1);
+    if (onFilterChange) onFilterChange(val);
   };
 
   return (

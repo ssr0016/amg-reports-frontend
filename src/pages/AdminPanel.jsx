@@ -80,7 +80,6 @@ export default function AdminPanel() {
     );
     return p > 0 ? p : 1;
   });
-  const [userStatusFilter, setUserStatusFilter] = useState("all");
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null);
   const [deletingUser, setDeletingUser] = useState(false);
 
@@ -159,18 +158,44 @@ export default function AdminPanel() {
   const currentYear = new Date().getFullYear();
   const prevMonthIndex = new Date().getMonth() - 1;
 
-  const [bulkMonth, setBulkMonth] = useState(
-    MONTHS[prevMonthIndex >= 0 ? prevMonthIndex : 11],
+  const defaultMonth = MONTHS[prevMonthIndex >= 0 ? prevMonthIndex : 11];
+  const defaultYear = prevMonthIndex < 0 ? currentYear - 1 : currentYear;
+
+  // ✅ Read dropdown values from URL on mount
+  const urlParams = new URLSearchParams(window.location.search);
+
+  const [bulkMonth, setBulkMonthState] = useState(
+    urlParams.get("month") || defaultMonth,
   );
-  const [bulkYear, setBulkYear] = useState(
-    prevMonthIndex < 0 ? currentYear - 1 : currentYear,
+  const [bulkYear, setBulkYearState] = useState(
+    parseInt(urlParams.get("year")) || defaultYear,
   );
-  const [trackerMonth, setTrackerMonth] = useState(
-    MONTHS[prevMonthIndex >= 0 ? prevMonthIndex : 11],
+  const [trackerMonth, setTrackerMonthState] = useState(
+    urlParams.get("tmonth") || defaultMonth,
   );
-  const [trackerYear, setTrackerYear] = useState(
-    prevMonthIndex < 0 ? currentYear - 1 : currentYear,
+  const [trackerYear, setTrackerYearState] = useState(
+    parseInt(urlParams.get("tyear")) || defaultYear,
   );
+  const [userStatusFilter, setUserStatusFilter] = useState(
+    urlParams.get("ustatus") || "all",
+  );
+  // ✅ Wrapper handlers — nag-u-update ng URL at state
+  const setBulkMonth = (val) => {
+    setBulkMonthState(val);
+    updateURL({ month: val });
+  };
+  const setBulkYear = (val) => {
+    setBulkYearState(val);
+    updateURL({ year: val });
+  };
+  const setTrackerMonth = (val) => {
+    setTrackerMonthState(val);
+    updateURL({ tmonth: val });
+  };
+  const setTrackerYear = (val) => {
+    setTrackerYearState(val);
+    updateURL({ tyear: val });
+  };
 
   // ── Fetch #1: Paginated display (10 per page) ─────────────────────────────
   const fetchReports = useCallback(async () => {
@@ -567,9 +592,15 @@ export default function AdminPanel() {
         <AdminTrackerTab
           trackerData={trackerData}
           trackerMonth={trackerMonth}
-          setTrackerMonth={setTrackerMonth}
+          setTrackerMonth={(val) => {
+            setTrackerMonth(val);
+            handleTrackerPageChange(1);
+          }}
           trackerYear={trackerYear}
-          setTrackerYear={setTrackerYear}
+          setTrackerYear={(val) => {
+            setTrackerYear(val);
+            handleTrackerPageChange(1);
+          }}
           submittedCount={submittedCount}
           notSubmittedCount={notSubmittedCount}
           approvedCount={approvedCount}
@@ -598,7 +629,7 @@ export default function AdminPanel() {
           setStatusFilter={(val) => {
             setUserStatusFilter(val);
             setUserPage(1);
-            updateURL({ upage: 1 });
+            updateURL({ upage: 1, ustatus: val });
           }}
         />
       )}
@@ -607,6 +638,8 @@ export default function AdminPanel() {
         <AdminLogsTab
           logsPage={logsPage}
           onLogsPageChange={handleLogsPageChange}
+          initialFilter={urlParams.get("laction") || ""}
+          onFilterChange={(val) => updateURL({ laction: val, lpage: 1 })}
         />
       )}
 
