@@ -2,7 +2,8 @@
 import { useState, useEffect, useCallback } from "react";
 import API from "../services/api";
 import Spinner from "./Spinner";
-import Pagination from "./Spinner";
+import Pagination from "./Pagination"; // ✅ fixed — was wrongly importing Spinner
+import { FaChevronDown } from "react-icons/fa";
 
 const ACTION_LABELS = {
   APPROVE_REPORT: {
@@ -73,12 +74,11 @@ export default function AdminLogsTab() {
       setLoading(true);
       const params = { page, limit: ITEMS_PER_PAGE };
       if (filterAction) params.action = filterAction;
-
       const res = await API.get("/audit-logs", { params });
       setLogs(res.data.data);
       setTotal(res.data.total);
     } catch {
-      // silently fail — logs are non-critical
+      // silent fail
     } finally {
       setLoading(false);
     }
@@ -94,25 +94,31 @@ export default function AdminLogsTab() {
   return (
     <div>
       {/* ── TOOLBAR ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
         <p className="text-sm text-gray-500">{total} total logs</p>
 
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">
-            Filter
-          </label>
-          <select
-            value={filterAction}
-            onChange={(e) => setFilterAction(e.target.value)}
-            className="cursor-pointer appearance-none bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 text-gray-800 text-sm font-medium rounded-lg px-3 py-2 outline-none shadow-sm transition"
-          >
-            <option value="">All Actions</option>
-            {Object.entries(ACTION_LABELS).map(([key, { label }]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
+        {/* ✅ Filter dropdown — same style as Month/Year dropdowns */}
+        <div className="flex flex-row gap-2 items-end justify-end">
+          <div className="flex flex-col gap-1">
+            <label className="text-[10px] sm:text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Filter
+            </label>
+            <div className="relative">
+              <select
+                value={filterAction}
+                onChange={(e) => setFilterAction(e.target.value)}
+                className="cursor-pointer appearance-none bg-white border border-gray-300 hover:border-blue-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 text-gray-800 text-sm font-medium rounded-lg pl-3 pr-8 py-2 transition outline-none shadow-sm w-[190px] sm:w-[210px]"
+              >
+                <option value="">All Actions</option>
+                {Object.entries(ACTION_LABELS).map(([key, { label }]) => (
+                  <option key={key} value={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <FaChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 h-3 w-3" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -122,7 +128,7 @@ export default function AdminLogsTab() {
           <Spinner className="h-10 w-10 text-blue-600" />
         </div>
       ) : logs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center h-40 text-gray-400">
+        <div className="flex flex-col items-center justify-center h-40 text-gray-400 text-center px-4">
           <p className="text-base font-medium">No logs found</p>
           <p className="text-sm">
             Actions will appear here once admins start using the system.
@@ -238,7 +244,7 @@ export default function AdminLogsTab() {
                       <td className="px-4 py-3 text-gray-600 max-w-[200px] truncate">
                         {log.targetName || "—"}
                       </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">
+                      <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                         {log.details?.month
                           ? `${log.details.month} ${log.details.year ?? ""}`
                           : log.details?.updatedFields
@@ -254,28 +260,12 @@ export default function AdminLogsTab() {
             </table>
           </div>
 
-          {/* ── PAGINATION ── */}
-          {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-4">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="cursor-pointer px-3 py-1.5 text-sm rounded-lg border border-gray-300 disabled:opacity-40 hover:bg-gray-100 transition"
-              >
-                ← Prev
-              </button>
-              <span className="text-sm text-gray-600">
-                Page {page} of {totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
-                className="cursor-pointer px-3 py-1.5 text-sm rounded-lg border border-gray-300 disabled:opacity-40 hover:bg-gray-100 transition"
-              >
-                Next →
-              </button>
-            </div>
-          )}
+          {/* ✅ Same Pagination component as Reports and Users */}
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            setPage={setPage}
+          />
         </>
       )}
     </div>

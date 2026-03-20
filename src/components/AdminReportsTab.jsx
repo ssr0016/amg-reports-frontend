@@ -11,9 +11,10 @@ const currentYear = new Date().getFullYear();
 const YEARS = [currentYear, currentYear - 1, currentYear - 2];
 
 export default function AdminReportsTab({
-  reports,
-  paginatedReports,
-  totalReportPages,
+  reports, // ✅ already paginated from backend — use directly
+  paginatedReports, // same as reports (kept for compatibility)
+  totalReportPages, // ✅ from backend
+  totalReportCount, // ✅ total count from backend
   reportPage,
   setReportPage,
   loading,
@@ -48,7 +49,10 @@ export default function AdminReportsTab({
     <>
       {/* ── TOOLBAR ── */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
-        <p className="text-sm text-gray-500">{reports.length} total reports</p>
+        {/* ✅ totalReportCount — accurate total from backend */}
+        <p className="text-sm text-gray-500">
+          {totalReportCount ?? reports.length} total reports
+        </p>
 
         {/* Controls — right side, inline always */}
         <div className="flex flex-row gap-2 items-end justify-end flex-wrap">
@@ -94,7 +98,7 @@ export default function AdminReportsTab({
             </div>
           </div>
 
-          {/* Bulk Download — full width on mobile */}
+          {/* Bulk Download */}
           <button
             onClick={openBulkPreview}
             className="cursor-pointer flex items-center justify-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium whitespace-nowrap shadow-sm transition self-end"
@@ -119,9 +123,9 @@ export default function AdminReportsTab({
         </div>
       ) : (
         <>
-          {/* ── MOBILE CARDS (below sm) ── */}
+          {/* ── MOBILE CARDS ── */}
           <div className="flex flex-col gap-3 sm:hidden">
-            {paginatedReports.map((r) => (
+            {reports.map((r) => (
               <div
                 key={r._id}
                 className="bg-white shadow-sm rounded-xl p-4 border border-gray-100"
@@ -181,7 +185,7 @@ export default function AdminReportsTab({
             ))}
           </div>
 
-          {/* ── DESKTOP TABLE (sm+) ── */}
+          {/* ── DESKTOP TABLE ── */}
           <div className="hidden sm:block bg-white shadow-sm rounded-xl border border-gray-100 overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead>
@@ -206,7 +210,7 @@ export default function AdminReportsTab({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {paginatedReports.map((r) => (
+                {reports.map((r) => (
                   <tr key={r._id} className="hover:bg-gray-50 transition">
                     <td className="px-4 py-3 font-medium text-gray-800 whitespace-nowrap">
                       {r.worker}
@@ -269,6 +273,7 @@ export default function AdminReportsTab({
             </table>
           </div>
 
+          {/* ✅ Pagination — uses backend total pages */}
           <Pagination
             currentPage={reportPage}
             totalPages={totalReportPages}

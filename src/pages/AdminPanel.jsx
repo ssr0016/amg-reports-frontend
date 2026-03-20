@@ -11,13 +11,17 @@ import {
   FaCalendarAlt,
 } from "react-icons/fa";
 import { exportBulkReports } from "../utils/exportExcel";
-import { ITEMS_PER_PAGE, MONTHS } from "../constants";
+import { MONTHS } from "../constants";
 import AdminReportsTab from "../components/AdminReportsTab";
 import AdminTrackerTab from "../components/AdminTrackerTab";
 import AdminUsersTab from "../components/AdminUsersTab";
 import AdminLogsTab from "../components/AdminLogsTab";
 import UserFormModal from "../components/UserFormModal";
 import DeleteConfirmModal from "../components/DeleteConfirmModal";
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const REPORTS_PER_PAGE = 10;
+const USERS_PER_PAGE = 10;
 
 function getPreviousMonthLabel() {
   const now = new Date();
@@ -35,17 +39,22 @@ export default function AdminPanel() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // ── Reports state ────────────────────────────────────────────────────────────
   const [reports, setReports] = useState([]);
+  const [totalReportCount, setTotalReportCount] = useState(0); // ✅ from backend
+  const [totalReportPages, setTotalReportPages] = useState(1); // ✅ from backend
   const [loadingReports, setLoadingReports] = useState(true);
   const [togglingId, setTogglingId] = useState(null);
   const [reportPage, setReportPage] = useState(1);
 
+  // ── Users state ──────────────────────────────────────────────────────────────
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [userPage, setUserPage] = useState(1);
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null);
   const [deletingUser, setDeletingUser] = useState(false);
 
+  // ── User form state ──────────────────────────────────────────────────────────
   const [userForm, setUserForm] = useState({
     name: "",
     username: "",
@@ -76,19 +85,55 @@ export default function AdminPanel() {
     prevMonthIndex < 0 ? currentYear - 1 : currentYear,
   );
 
+  // ── Fetch #1: Paginated display (10 per page) ─────────────────────────────
   const fetchReports = useCallback(async () => {
     try {
       setLoadingReports(true);
       const res = await API.get("/reports", {
-        params: { month: bulkMonth, year: bulkYear, limit: 9999 },
+        params: {
+          month: bulkMonth,
+          year: bulkYear,
+          page: reportPage,
+          limit: REPORTS_PER_PAGE, // ✅ 10 lang — hindi 9999
+        },
       });
       setReports(res.data.data);
+      setTotalReportCount(res.data.total); // ✅ total count from backend
+      setTotalReportPages(res.data.pages); // ✅ total pages from backend
     } catch {
       toast.error("Failed to fetch reports.");
     } finally {
       setLoadingReports(false);
     }
-  }, [bulkMonth, bulkYear]);
+  }, [bulkMonth, bulkYear, reportPage]);
+
+  // ── Fetch #2: All reports — called on demand for bulk download only ────────
+  const handleBulkDownload = async () => {
+    try {
+      const res = await API.get("/reports", {
+        params: {
+          month: bulkMonth,
+          year: bulkYear,
+          limit: 9999, // ✅ 9999 dito lang — para sa Excel, hindi sa display
+        },
+      });
+
+      const allReports = res.data.data;
+      const approvedReports = allReports.filter((r) => r.completed === true);
+
+      if (approvedReports.length === 0) {
+        toast.error(`No approved reports found for ${bulkMonth} ${bulkYear}.`);
+        return;
+      }
+
+      await exportBulkReports(approvedReports, `${bulkMonth} ${bulkYear}`);
+      toast.success(
+        `Downloading ${approvedReports.length} approved reports...`,
+      );
+    } catch {
+      toast.error("Failed to export reports.");
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -108,6 +153,8 @@ export default function AdminPanel() {
   useEffect(() => {
     fetchReports();
   }, [fetchReports]);
+
+  // ✅ Reset sa page 1 kapag nagbago ang month o year
   useEffect(() => {
     setReportPage(1);
   }, [bulkMonth, bulkYear]);
@@ -117,28 +164,13 @@ export default function AdminPanel() {
       setTogglingId(id);
       const res = await API.patch(`/reports/${id}/complete`);
       const updated = res.data.data;
+      // ✅ Update lang yung current page — hindi na kailangan ng full refetch
       setReports((prev) => prev.map((r) => (r._id === id ? updated : r)));
       toast.success("Status updated!");
     } catch {
       toast.error("Failed to update status.");
     } finally {
       setTogglingId(null);
-    }
-  };
-
-  const handleBulkDownload = async () => {
-    const approvedReports = reports.filter((r) => r.completed === true);
-    if (approvedReports.length === 0) {
-      toast.error(`No approved reports found for ${bulkMonth} ${bulkYear}.`);
-      return;
-    }
-    try {
-      await exportBulkReports(approvedReports, `${bulkMonth} ${bulkYear}`);
-      toast.success(
-        `Downloading ${approvedReports.length} approved reports...`,
-      );
-    } catch {
-      toast.error("Failed to export reports.");
     }
   };
 
@@ -222,10 +254,9 @@ export default function AdminPanel() {
     }
   };
 
-  // Derived values
+  // ── Derived values ───────────────────────────────────────────────────────────
   const prevMonthLabel = getPreviousMonthLabel();
   const prevMonth = getPrevMonth();
-  const totalReports = reports.length;
   const totalUsers = users.filter((u) => u.role === "user").length;
   const totalAdmins = users.filter((u) => u.role === "admin").length;
   const prevMonthReports = reports.filter((r) =>
@@ -256,16 +287,13 @@ export default function AdminPanel() {
   const notSubmittedCount = trackerData.filter((d) => !d.submitted).length;
   const approvedCount = trackerData.filter((d) => d.approved).length;
 
-  const totalReportPages = Math.ceil(reports.length / ITEMS_PER_PAGE);
-  const paginatedReports = reports.slice(
-    (reportPage - 1) * ITEMS_PER_PAGE,
-    reportPage * ITEMS_PER_PAGE,
-  );
-  const totalUserPages = Math.ceil(users.length / ITEMS_PER_PAGE);
+  // ✅ Users — frontend pagination (users ay kakaunti lang, okay na)
+  const totalUserPages = Math.ceil(users.length / USERS_PER_PAGE);
   const paginatedUsers = users.slice(
-    (userPage - 1) * ITEMS_PER_PAGE,
-    userPage * ITEMS_PER_PAGE,
+    (userPage - 1) * USERS_PER_PAGE,
+    userPage * USERS_PER_PAGE,
   );
+
   const years = [currentYear, currentYear - 1, currentYear - 2];
 
   const TABS = [
@@ -297,9 +325,7 @@ export default function AdminPanel() {
       </div>
 
       {/* ── SUMMARY CARDS ── */}
-      {/* 2-col on mobile, 4-col on lg */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-5 sm:mb-6">
-        {/* Card 1 */}
         <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
           <div className="bg-blue-100 text-blue-600 p-2 sm:p-3 rounded-lg shrink-0">
             <FaFileAlt className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -308,13 +334,13 @@ export default function AdminPanel() {
             <p className="text-[10px] sm:text-xs text-gray-500 truncate leading-tight">
               {bulkMonth} {bulkYear} Reports
             </p>
+            {/* ✅ totalReportCount — accurate kahit paginated */}
             <p className="text-xl sm:text-2xl font-bold text-gray-800 leading-tight">
-              {totalReports}
+              {totalReportCount}
             </p>
           </div>
         </div>
 
-        {/* Card 2 */}
         <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
           <div className="bg-purple-100 text-purple-600 p-2 sm:p-3 rounded-lg shrink-0">
             <FaCalendarAlt className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -326,7 +352,6 @@ export default function AdminPanel() {
             <p className="text-xl sm:text-2xl font-bold text-gray-800 leading-tight">
               {prevMonthReports}
             </p>
-            {/* stacked on mobile, inline on sm+ */}
             <div className="flex flex-col sm:flex-row gap-0 sm:gap-2 mt-0.5">
               <span className="text-[10px] sm:text-xs text-green-600 font-medium whitespace-nowrap">
                 ✓ {prevMonthApproved} approved
@@ -338,7 +363,6 @@ export default function AdminPanel() {
           </div>
         </div>
 
-        {/* Card 3 */}
         <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
           <div className="bg-green-100 text-green-600 p-2 sm:p-3 rounded-lg shrink-0">
             <FaUsers className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -353,7 +377,6 @@ export default function AdminPanel() {
           </div>
         </div>
 
-        {/* Card 4 */}
         <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 border border-gray-100 flex items-center gap-2 sm:gap-3">
           <div className="bg-yellow-100 text-yellow-600 p-2 sm:p-3 rounded-lg shrink-0">
             <FaUserShield className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -370,7 +393,6 @@ export default function AdminPanel() {
       </div>
 
       {/* ── TABS ── */}
-      {/* scrollable on very small screens */}
       <div className="flex gap-0 mb-5 sm:mb-6 border-b border-gray-200 overflow-x-auto scrollbar-none">
         {TABS.map(({ key, label }) => (
           <button
@@ -390,9 +412,10 @@ export default function AdminPanel() {
       {/* ── TAB CONTENT ── */}
       {activeTab === "reports" && (
         <AdminReportsTab
-          reports={reports}
-          paginatedReports={paginatedReports}
-          totalReportPages={totalReportPages}
+          reports={reports} // ✅ 10 per page na lang
+          paginatedReports={reports} // ✅ na-paginate na sa backend
+          totalReportPages={totalReportPages} // ✅ from backend
+          totalReportCount={totalReportCount} // ✅ total count
           reportPage={reportPage}
           setReportPage={setReportPage}
           loading={loadingReports}
