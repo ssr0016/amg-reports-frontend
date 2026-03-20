@@ -49,11 +49,12 @@ export default function AdminPanel() {
 
   // ── Users state ──────────────────────────────────────────────────────────────
   const [users, setUsers] = useState([]);
-  const [allUsers, setAllUsers] = useState([]); // ✅ para sa Tracker — lahat ng users
+  const [allUsers, setAllUsers] = useState([]);
   const [totalUserCount, setTotalUserCount] = useState(0);
   const [totalUserPages, setTotalUserPages] = useState(1);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [userPage, setUserPage] = useState(1);
+  const [userStatusFilter, setUserStatusFilter] = useState("all"); // ✅ new
   const [confirmDeleteUserId, setConfirmDeleteUserId] = useState(null);
   const [deletingUser, setDeletingUser] = useState(false);
 
@@ -64,6 +65,9 @@ export default function AdminPanel() {
     email: "",
     password: "",
     role: "user",
+    status: "active",
+    areaAssignment: "",
+    churchName: "", // ✅ new fields
   });
   const [editingUserId, setEditingUserId] = useState(null);
   const [savingUser, setSavingUser] = useState(false);
@@ -141,15 +145,15 @@ export default function AdminPanel() {
   const fetchUsers = useCallback(async () => {
     try {
       setLoadingUsers(true);
-      // Paginated — para sa Users tab display
-      const res = await API.get("/auth/users", {
-        params: { page: userPage, limit: 10 },
-      });
+      // ✅ Paginated + filtered by status
+      const params = { page: userPage, limit: 10 };
+      if (userStatusFilter !== "all") params.status = userStatusFilter;
+      const res = await API.get("/auth/users", { params });
       setUsers(res.data.data);
       setTotalUserCount(res.data.total);
       setTotalUserPages(res.data.pages);
 
-      // ✅ All users — para sa Tracker (walang pagination)
+      // All users — para sa Tracker (walang filter)
       const allRes = await API.get("/auth/users", {
         params: { page: 1, limit: 9999 },
       });
@@ -159,7 +163,7 @@ export default function AdminPanel() {
     } finally {
       setLoadingUsers(false);
     }
-  }, [userPage]);
+  }, [userPage, userStatusFilter]); // ✅ re-fetch kapag nagbago ang filter
 
   // ── Fetch #3: All reports for tracker (separate — hindi affected ng pagination) ──
   const [allReports, setAllReports] = useState([]);
@@ -194,7 +198,7 @@ export default function AdminPanel() {
   }, [fetchReports]);
   useEffect(() => {
     setUserPage(1);
-  }, []); // ✅ reset on mount only
+  }, [userStatusFilter]); // ✅ reset page on filter change
 
   // ✅ Reset sa page 1 kapag nagbago ang month o year
   useEffect(() => {
@@ -228,6 +232,9 @@ export default function AdminPanel() {
       email: "",
       password: "",
       role: "user",
+      status: "active",
+      areaAssignment: "",
+      churchName: "",
     });
     setShowUserPassword(false);
     setShowUserForm(true);
@@ -241,6 +248,9 @@ export default function AdminPanel() {
       email: u.email,
       password: "",
       role: u.role,
+      status: u.status || "active", // ✅
+      areaAssignment: u.areaAssignment || "", // ✅
+      churchName: u.churchName || "", // ✅
     });
     setShowUserPassword(false);
     setShowUserForm(true);
@@ -255,6 +265,9 @@ export default function AdminPanel() {
       email: "",
       password: "",
       role: "user",
+      status: "active",
+      areaAssignment: "",
+      churchName: "",
     });
     setShowUserPassword(false);
   };
@@ -517,6 +530,11 @@ export default function AdminPanel() {
           onEditUser={openEditUser}
           onDeleteUser={setConfirmDeleteUserId}
           currentUserId={user?.id}
+          statusFilter={userStatusFilter}
+          setStatusFilter={(val) => {
+            setUserStatusFilter(val);
+            setUserPage(1);
+          }}
         />
       )}
 
